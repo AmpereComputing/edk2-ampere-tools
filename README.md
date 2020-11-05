@@ -1,4 +1,4 @@
-This repository contains instructions and tools to assist in the 
+This repository contains instructions and tools to assist in the
 compilation and final build of Tianocore for Ampere's platforms. It is
 an extension of what is already provided in the README located at
 `edk2-platforms/Platform/Ampere/README.md`
@@ -9,7 +9,7 @@ It is assumed that your build environment has been set up appropriately
 based on `edk2-platforms/Platform/Ampere/README.md`.
 
 Througout this document, Ampere's Mt. Jade platform is used to illustrate
-various steps to arrive at a final Tianocore UEFI image that can be 
+various steps to arrive at a final Tianocore UEFI image that can be
 flashed to the platform.
 
 The process of creating a flashable image involves the following steps:
@@ -34,7 +34,7 @@ $ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -D SECURE_BOOT_ENABLE
 
 ```
 
-The resulted image will be at 
+The resulted image will be at
 
 `edk2-platforms/Build/Jade/RELEASE_GCC5/FV/BL33_JADE_UEFI.fd`
 
@@ -55,7 +55,7 @@ $ fiptool create --nt-fw-cert Build/Jade/jade_tianocore.fd.crt --nt-fw Build/Jad
 
 ## Integrating Board Setting and Ampere's Arm Trusted Firmware (ATF)
 
-First, you need to download the compatible Ampere ATF image from Ampere Connect portal at https://amperecomputing.com/customers/. Refer to the edk2-platforms release note for compatible ATF image version. 
+First, you need to download the compatible Ampere ATF image from Ampere Connect portal at https://amperecomputing.com/customers/. Refer to the edk2-platforms release note for compatible ATF image version.
 
 You also need to obtain the associated board setting file from Ampere. At this time, we provide a sample board setting for Mt. Jade in this repo under board_setting.
 
@@ -75,7 +75,7 @@ Build UEFI +Board Setting + ATF image
 
 ```
 $ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > Build/Jade/jade_tianocore_atf.img
-$ dd bs=1 conv=notrunc if=${ATF_IMG} of=Build/Jade/jade_tianocore_atf.img
+$ dd bs=1 conv=notrunc if=<ampere_atf_image_filepath> of=Build/Jade/jade_tianocore_atf.img
 $ dd bs=1 seek=2031616 conv=notrunc if=Build/Jade/jade_board_setting.bin of=Build/Jade/jade_tianocore_atf.img
 $ dd bs=1024 seek=2048 if=Build/Jade/jade_tianocore.fip.signed of=Build/Jade/jade_tianocore_atf.img
 
