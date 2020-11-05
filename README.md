@@ -34,7 +34,7 @@ $ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -D SECURE_BOOT_ENABLE
 
 ```
 
-The resulted image will be at
+The resulting image will be at
 
 `edk2-platforms/Build/Jade/RELEASE_GCC5/FV/BL33_JADE_UEFI.fd`
 
@@ -55,15 +55,13 @@ $ fiptool create --nt-fw-cert Build/Jade/jade_tianocore.fd.crt --nt-fw Build/Jad
 
 ## Integrating Board Setting and Ampere's Arm Trusted Firmware (ATF)
 
-First, you need to download the compatible Ampere ATF image from Ampere Connect portal at https://amperecomputing.com/customers/. Refer to the edk2-platforms release note for compatible ATF image version.
+You need to download the compatible Ampere ATF image from Ampere Connect portal at https://amperecomputing.com/customers/. Refer to the edk2-platforms release note for compatible ATF image version.
 
-You also need to obtain the associated board setting file from Ampere. At this time, we provide a sample board setting for Mt. Jade in this repo under board_setting.
-
-Build Board Settings
-
-Skip this step if you do not make any change to the board setting file (e.g. jade_board_setting.txt) and use the provided jade_board_setting.bin directly in a below step.
+### Build Board Setting
 
 Download nvparam.py from this repository to your build machine.
+
+A sample working board setting file is located under Platform/Ampere/{Platform Name}Pkg/.
 
 ```
 $ cd edk2-platforms
@@ -71,7 +69,7 @@ $ python nvparam.py -f Platform/Ampere/JadePkg/jade_board_setting.txt -o Build/J
 
 ```
 
-Build UEFI +Board Setting + ATF image
+### Build Integrated UEFI + Board Setting + ATF image
 
 ```
 $ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > Build/Jade/jade_tianocore_atf.img
@@ -82,7 +80,7 @@ $ dd bs=1024 seek=2048 if=Build/Jade/jade_tianocore.fip.signed of=Build/Jade/jad
 Result: Build/jade_tianocore_atf.img
 
 ```
-Build Tianocore Capsule
+### Build Tianocore Capsule
 
 ```
 $ openssl dgst -sha256 -sign Platform/Ampere/JadePkg/TestKeys/Dbb_AmpereTest.priv.pem -out Build/Jade/jade_tianocore_atf.img.sig Build/Jade/jade_tianocore_atf.img
@@ -92,3 +90,26 @@ $ cp Build/Jade/RELEASE_GCC5/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap Build/Jade
 
 Result: Build/Jade/jade_tianocore_atf.cap
 ```
+
+# Using helper-scripts and Makefile
+
+Provided in this repository are the helper script edk2-build.sh modified from Linaro's uefi-tools at https://git.linaro.org/uefi/uefi-tools.git with added support for building Ampere's platform and final integrated Tianocore image.
+```
+$ ./edk2-ampere-tools/edk2-build.sh -b RELEASE Jade --atf-image <ampere_atf_slim_path>
+...
+BUILDS/jade_tianocore_atf_1.01.100
+├── [1.4K]  jade_board_setting.bin
+├── [9.8K]  jade_board_setting.txt
+├── [7.8M]  jade_tianocore_1.01.100.fd
+├── [ 13M]  jade_tianocore_atf_1.01.100.cap
+└── [9.8M]  jade_tianocore_atf_1.01.100.img
+
+0 directories, 5 files
+------------------------------------------------------------
+                         Ampere Jade (AARCH64) RELEASE pass
+------------------------------------------------------------
+pass   1
+fail   0
+```
+An equivalent Makefile is also provided for those who wish to use it instead. Place the Makefile in your ${WORKSPACE} directory and run `make` or `make help` for options.
+
