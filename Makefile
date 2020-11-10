@@ -41,6 +41,8 @@ ATF_TOOLS_DIR := $(SCRIPTS_DIR)/toolchain/atf-tools
 COMPILER_DIR := $(SCRIPTS_DIR)/toolchain/ampere
 IASL_DIR := $(SCRIPTS_DIR)/toolchain/iasl
 
+export WORKSPACE := $(PWD)
+
 # Input DEST_DIR
 ifeq (, $(DEST_DIR))
 	OUTPUT_BIN_DIR = $(PWD)/BUILDS/$(BOARD_NAME)_$(BUILD_IMG_TYPE)_atf$(OUTPUT_VARIANT)_$(VER).$(BUILD)
@@ -129,11 +131,9 @@ DEFAULT_BOARD_SETTING = $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_U
 DBB_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg/TestKeys/Dbb_AmpereTest.priv.pem
 DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg/TestKeys/Dbu_AmpereTest.priv.pem
 
-EDK2_ATF_SIGNED_IMAGE := $(EDK2_PLATFORMS_SRC_DIR)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BOARD_NAME)_atfedk2.img.signed
-EDK2_FV_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/FV
+EDK2_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BOARD_NAME)_atfedk2.img.signed
+EDK2_FV_DIR := $(WORKSPACE)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/FV
 EDK2_FD_IMAGE := $(EDK2_FV_DIR)/BL33_$(BOARD_NAME_UPPER)_UEFI.fd
-
-export WORKSPACE := $(PWD)
 
 # Targets
 define HELP_MSG
@@ -221,7 +221,7 @@ endif
 
 _check_compiler:
 	@echo -n "Checking compiler..."
-ifneq ($(and $(CROSS_COMPILE),$(shell which $(CROSS_COMPILE)gcc),$(shell $(CROSS_COMPILE)gcc --version | grep ampere | grep no-sysroot)),)
+ifneq ($(and $(CROSS_COMPILE),$(shell which $(CROSS_COMPILE)gcc),$(shell $(CROSS_COMPILE)gcc --version | grep Ampere | grep nosysroot)),)
 	@echo "OK"
 else
 
