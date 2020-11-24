@@ -34,6 +34,7 @@ SCRIPTS_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 ROOT_DIR := $(shell dirname $(SCRIPTS_DIR))
 
 EDK2_SRC_DIR := $(ROOT_DIR)/edk2
+EDK2_NON_OSI_SRC_DIR := $(ROOT_DIR)/edk2-non-osi
 EDK2_PLATFORMS_SRC_DIR := $(ROOT_DIR)/edk2-platforms
 EDK2_PLATFORMS_PKG_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg
 
@@ -317,7 +318,7 @@ ifeq (, $(wildcard $(EDK2_SRC_DIR)/BaseTools/Source/C/bin))
 	@echo "Build Tianocore Basetools..."
 	$(MAKE) -C $(EDK2_SRC_DIR)/BaseTools
 endif
-	$(eval export PACKAGES_PATH = $(EDK2_SRC_DIR):$(EDK2_PLATFORMS_SRC_DIR))
+	$(eval export PACKAGES_PATH = $(EDK2_SRC_DIR):$(EDK2_PLATFORMS_SRC_DIR):$(EDK2_NON_OSI_SRC_DIR))
 	$(eval export $(EDK2_GCC_TAG)_AARCH64_PREFIX = $(CROSS_COMPILE))
 
 _tianocore_sign_fd: _check_atf_tools
