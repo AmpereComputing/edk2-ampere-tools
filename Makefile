@@ -91,7 +91,7 @@ else
 endif
 
 ifeq ($(BUILD_LINUXBOOT),1)
-	LINUXBOOTPKG = Linuxboot
+	LINUXBOOTPKG = LinuxBoot
 	BUILD_IMG_TYPE = linuxboot
 else
 	LINUXBOOTPKG =
