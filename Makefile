@@ -135,6 +135,10 @@ EDK2_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(B
 EDK2_FV_DIR := $(WORKSPACE)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/FV
 EDK2_FD_IMAGE := $(EDK2_FV_DIR)/BL33_$(BOARD_NAME_UPPER)_UEFI.fd
 
+ifeq ($(or $(shell $(CROSS_COMPILE)gcc --version | grep -v Ampere | grep aarch64),$(shell $(CROSS_COMPILE)gcc --version | grep Ampere | grep dynamic-nosysroot)),)
+	CROSS_COMPILE := $(AARCH64_TOOLS_DIR)/$(CROSS_COMPILE_PREFIX)
+endif
+
 # Targets
 define HELP_MSG
 Ampere EDK2 Tools
@@ -221,21 +225,19 @@ endif
 
 _check_compiler:
 	@echo -n "Checking compiler..."
-ifneq ($(and $(CROSS_COMPILE),$(shell which $(CROSS_COMPILE)gcc),$(shell $(CROSS_COMPILE)gcc --version | grep Ampere | grep nosysroot)),)
-	@echo "OK"
-else
-
-	$(eval CROSS_COMPILE=$(AARCH64_TOOLS_DIR)/$(CROSS_COMPILE_PREFIX))
-ifeq (, $(wildcard $(AARCH64_TOOLS_DIR)/$(CROSS_COMPILE_PREFIX)gcc))		# check default toolchain directory
+ifneq ($(shell echo $(CROSS_COMPILE) | grep $(AARCH64_TOOLS_DIR)),)
+ifeq ($(wildcard $(AARCH64_TOOLS_DIR)/$(CROSS_COMPILE_PREFIX)gcc),)
 	@echo "Not Found"
 	@echo "Downloading and setting Ampere compiler..."
 	@mkdir -p $(COMPILER_DIR)
 	@wget -O - -q $(COMPILER_URL) | tar xJf - -C $(COMPILER_DIR) --strip-components=1 --checkpoint=.100
 else
-	@echo "Use Default Compiler"
+	@echo "OK default"
 endif
-
+else
+	@echo "OK external"
 endif
+	@echo "$(shell $(CROSS_COMPILE)gcc --version | awk 'FNR == 1')"
 
 _check_atf_tools:
 	@echo -n "Checking ATF Tools..."

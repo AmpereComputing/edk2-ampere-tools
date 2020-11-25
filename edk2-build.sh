@@ -399,7 +399,9 @@ function check_tools
     elif [ -z "$CROSS_COMPILE" ]; then
         CROSS_COMPILE=${AMPERE_CROSS_COMPILE}
     fi
-    check_ampere_toolchain ${TOOLS_DIR} "$CROSS_COMPILE"gcc
+    if [ "$CROSS_COMPILE" = "$AMPERE_CROSS_COMPILE" ]; then
+        check_ampere_toolchain ${TOOLS_DIR} "$CROSS_COMPILE"gcc
+    fi
     RET=$?
     if [ $RET -ne 0 ]; then
         exit 1
