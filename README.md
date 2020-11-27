@@ -30,7 +30,7 @@ $ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -D SECURE_BOOT_ENABLE
 Building UEFI image with Linuxboot
 
 ```
-$ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -p Platform/Ampere/JadePkg/JadeLinuxboot.dsc
+$ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -p Platform/Ampere/JadePkg/JadeLinuxBoot.dsc
 
 ```
 
@@ -39,7 +39,12 @@ The resulting image will be at
 `edk2-platforms/Build/Jade/RELEASE_GCC5/FV/BL33_JADE_UEFI.fd`
 
 
-We will be using edk2-platforms/Build/Jade for the final artifacts.
+We will be using edk2-platforms/BUILDS/jade_tianocore_atf for the final artifacts.
+
+```
+$ cd edk2-platforms
+$ mkdir -p BUILDS/jade_tianocore_atf
+```
 
 ## Signing the image
 
@@ -52,7 +57,7 @@ $ cd AtfTools
 $ git init
 $ git remote add origin -f https://github.com/ARM-software/arm-trusted-firmware.git
 $ git config core.sparseCheckout true
-$ echo "include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool" > .git/info/sparse-checkout
+$ echo -ne "include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool" > .git/info/sparse-checkout
 $ git -C . checkout --track origin/master
 $ make -C tools/cert_create CRTTOOL=cert_create
 $ make -C tools/fiptool FIPTOOL=fiptool
@@ -63,8 +68,8 @@ Set up your $PATH to include cert_create and fiptool from above.
 Perform the following to sign the image:
 ```
 $ cd edk2-platforms
-$ cert_create -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key Platform/Ampere/JadePkg/TestKeys/Dbb_AmpereTest.priv.pem --nt-fw-cert Build/Jade/jade_tianocore.fd.crt --nt-fw Build/Jade/RELEASE_GCC5/FV/BL33_JADE_UEFI.fd
-$ fiptool create --nt-fw-cert Build/Jade/jade_tianocore.fd.crt --nt-fw Build/Jade/RELEASE_GCC5/FV/BL33_JADE_UEFI.fd Build/Jade/jade_tianocore.fip.signed
+$ cert_create -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key edk2-platforms/Platform/Ampere/JadePkg/TestKeys/Dbb_AmpereTest.priv.pem --nt-fw-cert BUILDS/jade_tianocore_atf/jade_tianocore.fd.crt --nt-fw Build/Jade/RELEASE_GCC5/FV/BL33_JADE_UEFI.fd
+$ fiptool create --nt-fw-cert BUILDS/jade_tianocore_atf/jade_tianocore.fd.crt --nt-fw Build/Jade/RELEASE_GCC5/FV/BL33_JADE_UEFI.fd BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed
 ```
 
 ## Integrating Board Setting and Ampere's Arm Trusted Firmware (ATF)
@@ -82,30 +87,30 @@ A sample working board setting file is located under Platform/Ampere/{Platform N
 
 ```
 $ cd edk2-platforms
-$ python nvparam.py -f Platform/Ampere/JadePkg/jade_board_setting.txt -o Build/Jade/jade_board_setting.bin
+$ python nvparam.py -f Platform/Ampere/JadePkg/jade_board_setting.txt -o BUILDS/jade_tianocore_atf/jade_board_setting.bin
 
 ```
 
 ### Build integrated UEFI + Board Setting + ATF image
 
 ```
-$ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > Build/Jade/jade_tianocore_atf.img
-$ dd bs=1 conv=notrunc if=<ampere_atf_image_filepath> of=Build/Jade/jade_tianocore_atf.img
-$ dd bs=1 seek=2031616 conv=notrunc if=Build/Jade/jade_board_setting.bin of=Build/Jade/jade_tianocore_atf.img
-$ dd bs=1024 seek=2048 if=Build/Jade/jade_tianocore.fip.signed of=Build/Jade/jade_tianocore_atf.img
+$ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ dd bs=1 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ dd bs=1 seek=2031616 conv=notrunc if=BUILDS/jade_tianocore_atf/jade_board_setting.bin of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ dd bs=1024 seek=2048 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 
-Result: Build/jade_tianocore_atf.img
+Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 
 ```
 ### Build Tianocore Capsule
 
 ```
-$ openssl dgst -sha256 -sign Platform/Ampere/JadePkg/TestKeys/Dbu_AmpereTest.priv.pem -out Build/Jade/jade_tianocore_atf.img.sig Build/Jade/jade_tianocore_atf.img
-$ cat Build/Jade/jade_tianocore_atf.img.sig Build/Jade/jade_tianocore_atf.img > Build/Jade/jade_atfedk2.img.signed
-$ build -a AARCH64 -t GCC5 -b RELEASE -p Platform/Ampere/JadePkg/JadeCapsule.dsc
-$ cp Build/Jade/RELEASE_GCC5/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap Build/Jade/jade_tianocore_atf.cap
+$ openssl dgst -sha256 -sign Platform/Ampere/JadePkg/TestKeys/Dbu_AmpereTest.priv.pem -out BUILDS/jade_tianocore_atf/jade_tianocore_atf.img.sig BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ cat BUILDS/jade_tianocore_atf/jade_tianocore_atf.img.sig BUILDS/jade_tianocore_atf/jade_tianocore_atf.img > Build/Jade/RELEASE_GCC5/jade_tianocore_atf.img.signed
+$ build -a AARCH64 -t GCC5 -b RELEASE -p Platform/Ampere/JadePkg/JadeCapsule.dsc -D UEFI_ATF_IMAGE=Build/Jade/RELEASE_GCC5/jade_tianocore_atf.img.signed
+$ cp Build/Jade/RELEASE_GCC5/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap
 
-Result: Build/Jade/jade_tianocore_atf.cap
+Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap
 ```
 
 # Using helper-scripts and Makefile
@@ -129,5 +134,5 @@ BUILD/jade_tianocore_atf_1.01.100
 pass   1
 fail   0
 ```
-An equivalent **Makefile** is also provided for those who wish to use it instead. Run `make -C edk2-ampere-tools` for options.
+An equivalent **Makefile** is also provided for those who wish to use it instead. Run `make -f edk2-ampere-tools/Makefile` for options.
 

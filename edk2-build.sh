@@ -25,6 +25,7 @@ STRICT=0                   # Override with --strict
 ATF_DIR=
 ATF_IMAGE=
 LINUXBOOT=0
+LINUXBOOT_FMT=
 TOS_DIR=
 TOOLCHAIN="gcc"            # Override with -T
 WORKSPACE=
@@ -66,19 +67,22 @@ function build_tianocore_atf
     if [ X"$target" != X"DEBUG" ]; then
         BUILD_TYPE=
     fi
+    if [ $LINUXBOOT -eq 1 ]; then
+        LINUXBOOT_FMT="_linuxboot"
+    fi
     if [ X"$DEST_DIR" == X"" ]; then
-        DEST_DIR="BUILDS/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}"
+        DEST_DIR="BUILDS/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}"
     fi
     mkdir -p ${DEST_DIR}
     UEFI_BIN="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o uefi_bin`"
-    cp -a $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/${UEFI_BIN}  $DEST_DIR/${PLATFORM_LOWER}_tianocore${BUILD_TYPE}_${VER}.${BUILD}.fd
+    cp -a $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/${UEFI_BIN}  $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd
     if [ X"$ATF_IMAGE" != X"" ]; then
         PLATFORM_PATH=${PLATFORMS_DIR}/"`dirname $PLATFORM_DSC`"
         if [ X"$BOARD_SETTING" == X"" ]; then
             BOARD_SETTING=$PLATFORM_PATH/${PLATFORM_LOWER}_board_setting.txt
         fi
-        cert_create -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key $PLATFORM_PATH/TestKeys/Dbb_AmpereTest.priv.pem --nt-fw-cert $DEST_DIR/${PLATFORM_LOWER}_tianocore${BUILD_TYPE}_${VER}.${BUILD}.fd.crt --nt-fw $DEST_DIR/${PLATFORM_LOWER}_tianocore${BUILD_TYPE}_${VER}.${BUILD}.fd
-        fiptool create --nt-fw-cert $DEST_DIR/${PLATFORM_LOWER}_tianocore${BUILD_TYPE}_${VER}.${BUILD}.fd.crt --nt-fw $DEST_DIR/${PLATFORM_LOWER}_tianocore${BUILD_TYPE}_${VER}.${BUILD}.fd $DEST_DIR/${PLATFORM_LOWER}_tianocore${BUILD_TYPE}_${VER}.${BUILD}.fip.signed
+        cert_create -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key $PLATFORM_PATH/TestKeys/Dbb_AmpereTest.priv.pem --nt-fw-cert $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd.crt --nt-fw $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd
+        fiptool create --nt-fw-cert $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd.crt --nt-fw $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed
         if [ "${BOARD_SETTING##*.}" = "txt" ]; then
             cp -a $BOARD_SETTING $DEST_DIR/${PLATFORM_LOWER}_board_setting.txt
             python $TOOLS_DIR/nvparam.py -f $DEST_DIR/${PLATFORM_LOWER}_board_setting.txt -o $DEST_DIR/${PLATFORM_LOWER}_board_setting.bin
@@ -86,15 +90,18 @@ function build_tianocore_atf
         if [ "${BOARD_SETTING##*.}" = "bin" ]; then
             cp -a $BOARD_SETTING $DEST_DIR/${PLATFORM_LOWER}_board_setting.bin
         fi
-        dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img
-        dd bs=1 conv=notrunc if=${ATF_IMAGE} of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img
-        dd bs=1 seek=2031616 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img
-        dd bs=1024 seek=2048 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img
+        dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+        dd bs=1 conv=notrunc if=${ATF_IMAGE} of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+        dd bs=1 seek=2031616 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+        dd bs=1024 seek=2048 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
         if [ $LINUXBOOT -eq 0 ]; then
             CAPSULE_DSC="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o capsule_dsc`"
             openssl dgst -sha256 -sign  $PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem -out $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img
-            cat $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img > $WS_BOARD/${PLATFORM_LOWER}_atfedk2.img.signed
-            build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}"
+            cat $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img > $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
+            # support 1.01 tag
+            ln -sf $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed $WS_BOARD/${PLATFORM_LOWER}_atfedk2.img.signed
+            build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
+				-D UEFI_ATF_IMAGE=$WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
             cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.cap
         fi
         rm -fr $DEST_DIR/*.img.signed $DEST_DIR/*.img.sig $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed
@@ -148,7 +155,12 @@ function do_build
     PLATFORM_DSC="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o dsc`"
     if [ $LINUXBOOT -eq 1 ]; then
         PLATFORM_DSC="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o linuxboot_dsc`"
-        PLATFORM_BUILDFLAGS=
+        if [ ! -e "${PLATFORMS_DIR}/${PLATFORM_DSC}" ]; then
+            TMP_DSC="`dirname $PLATFORM_DSC`"/${board}Linuxboot.dsc
+            if [ -e "${PLATFORMS_DIR}/${TMP_DSC}" ]; then
+                PLATFORM_DSC=${TMP_DSC}
+            fi
+        fi
     fi
     PLATFORM_PACKAGES_PATH=""
     COMPONENT_INF="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o inf`"
@@ -301,18 +313,11 @@ function configure_paths
     if [ -z "$PLATFORMS_DIR" -a -d "$PWD"/edk2-platforms ]; then
         PLATFORMS_DIR="$PWD"/edk2-platforms
     fi
-    if [ -z "$PLATFORMS_DIR" -a -d "$PWD"/edk2-platforms-dev ]; then
-        PLATFORMS_DIR="$PWD"/edk2-platforms-dev
-    fi
     if [ -z "$PLATFORMS_DIR" -a X"$WORKSPACE" = X"$TOOLS_DIR" ]; then
         if [ -d "$PWD"/../edk2-platforms ]; then
             PLATFORMS_DIR="`readlink -f $PWD/../edk2-platforms`"
         elif [ -d "$TOOLS_DIR"/../edk2-platforms ]; then
             PLATFORMS_DIR="`readlink -f $TOOLS_DIR/../edk2-platforms`"
-        elif [ -d "$PWD"/../edk2-platforms-dev ]; then
-            PLATFORMS_DIR="`readlink -f $PWD/../edk2-platforms-dev`"
-        elif [ -d "$TOOLS_DIR"/../edk2-platforms-dev ]; then
-            PLATFORMS_DIR="`readlink -f $TOOLS_DIR/../edk2-platforms-dev`"
         fi
     fi
     if [ -z "$PLATFORMS_DIR" ]; then

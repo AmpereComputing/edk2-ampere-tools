@@ -240,7 +240,7 @@ function get_atf_tools
     git init
     git remote add origin -f https://github.com/ARM-software/arm-trusted-firmware.git
     git config core.sparseCheckout true
-    echo -e "include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool" > .git/info/sparse-checkout
+    echo -ne "include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool" > .git/info/sparse-checkout
     git -C . checkout --track origin/master
     make -C tools/cert_create CRTTOOL=cert_create
     make -C tools/fiptool FIPTOOL=fiptool
@@ -294,12 +294,17 @@ function check_atf_tool
         rm -fr ${TOOLSDIR}/AtfTools
         return 0
     fi
-    echo "ERROR: can't locate the iasl tool" >&2
-    echo "       please download and install to edk2-ampere-tools/toolchain/iasl" >&2
-    echo "       $ wget https://acpica.org/sites/acpica/files/acpica-unix2-20200110.tar.gz" >&2
-    echo "       $ tar xzf acpica-unix2-20200110.tar.gz" >&2
-    echo "       $ cd acpica-unix2-20200110 && make" >&2
-    echo "       $ cp generate/unix/bin/iasl edk2-ampere-tools/toolchain/iasl/" >&2
+    echo "ERROR: can't locate the cert_create, fiptool tools" >&2
+    echo "       please download and install to edk2-ampere-tools/toolchain/atf-tools" >&2
+    echo "       $ mkdir -p AtfTools" >&2
+    echo "       $ cd AtfTools" >&2
+    echo "       $ git init && git remote add origin -f https://github.com/ARM-software/arm-trusted-firmware.git" >&2
+    echo "       $ echo -e \"include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool\" > .git/info/sparse-checkout" >&2
+    echo "       $ git -C . checkout --track origin/master" >&2
+    echo "       $ make -C tools/cert_create CRTTOOL=cert_create" >&2
+    echo "       $ make -C tools/fiptool FIPTOOL=fiptool" >&2
+    echo "       $ cp -a tools/cert_create/cert_create edk2-ampere-tools/toolchain/atf-tools/" >&2
+    echo "       $ cp -a tools/fiptool/fiptool edk2-ampere-tools/toolchain/atf-tools/" >&2
     return 1
 }
 
@@ -321,7 +326,7 @@ function check_iasl_tool
     wget -O - -q ${IASL_URL} | tar xzf - -C ${TOOLSDIR}
     if [ $? -eq 0 ]; then
         echo "Compiling ${IASL_NAME}..."
-        cd ${TOOLSDIR}/${IASL_NAME} && make
+        make -C ${TOOLSDIR}/${IASL_NAME} -j8 HOST=_CYGWIN
         if [ $? -eq 0 ]; then
             mkdir -p ${TOOLSDIR}/toolchain/iasl
             echo "Deploy to ${TOOLSDIR}/iasl..."
@@ -332,16 +337,11 @@ function check_iasl_tool
             fi
         fi
     fi
-    echo "ERROR: can't locate the cert_create, fiptool tools" >&2
-    echo "       please download and install to edk2-ampere-tools/toolchain/atf-tools" >&2
-    echo "       $ mkdir -p AtfTools" >&2
-    echo "       $ cd AtfTools" >&2
-    echo "       $ git init && git remote add origin -f https://github.com/ARM-software/arm-trusted-firmware.git" >&2
-    echo "       $ echo -e \"include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool\" > .git/info/sparse-checkout" >&2
-    echo "       $ git -C . checkout --track origin/master" >&2
-    echo "       $ make -C tools/cert_create CRTTOOL=cert_create" >&2
-    echo "       $ make -C tools/fiptool FIPTOOL=fiptool" >&2
-    echo "       $ cp -a tools/cert_create/cert_create edk2-ampere-tools/toolchain/atf-tools/" >&2
-    echo "       $ cp -a tools/fiptool/fiptool edk2-ampere-tools/toolchain/atf-tools/" >&2
+    echo "ERROR: can't locate the iasl tool" >&2
+    echo "       please download and install to edk2-ampere-tools/toolchain/iasl" >&2
+    echo "       $ wget https://acpica.org/sites/acpica/files/acpica-unix2-20200110.tar.gz" >&2
+    echo "       $ tar xzf acpica-unix2-20200110.tar.gz" >&2
+    echo "       $ make -C acpica-unix2-20200110 -j8" >&2
+    echo "       $ cp generate/unix/bin/iasl edk2-ampere-tools/toolchain/iasl/" >&2
     return 1
 }
