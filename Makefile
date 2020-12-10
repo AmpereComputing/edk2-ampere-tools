@@ -13,7 +13,8 @@ ATF_TBB ?= 1
 
 BOARD_NAME ?= jade
 BOARD_NAME_UPPER := $(shell echo $(BOARD_NAME) | tr a-z A-Z)
-BOARD_NAME_UPPER_FIRST_LETTER := $(shell echo $(BOARD_NAME) | sed 's/.*/\u&/')
+# Board name upper first letter
+BOARD_NAME_UFL := $(shell echo $(BOARD_NAME) | sed 's/.*/\u&/')
 
 # Directory variables
 CUR_DIR := $(PWD)
@@ -23,7 +24,7 @@ ROOT_DIR := $(shell dirname $(SCRIPTS_DIR))
 EDK2_SRC_DIR := $(ROOT_DIR)/edk2
 EDK2_NON_OSI_SRC_DIR := $(ROOT_DIR)/edk2-non-osi
 EDK2_PLATFORMS_SRC_DIR := $(ROOT_DIR)/edk2-platforms
-EDK2_PLATFORMS_PKG_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg
+EDK2_PLATFORMS_PKG_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg
 REQUIRE_EDK2_SRC := $(EDK2_SRC_DIR) $(EDK2_PLATFORMS_SRC_DIR)$(if $(wildcard $(EDK2_NON_OSI_SRC_DIR)), $(EDK2_NON_OSI_SRC_DIR),)
 
 ATF_TOOLS_DIR := $(SCRIPTS_DIR)/toolchain/atf-tools
@@ -54,7 +55,8 @@ EXECUTABLES := openssl git cut sed awk wget tar bison gcc g++
 # Build variant variables
 BUILD_VARIANT := $(if $(shell echo $(DEBUG) | grep -w 1),DEBUG,RELEASE)
 BUILD_VARIANT_LOWER := $(shell echo $(BUILD_VARIANT) | tr A-Z a-z)
-BUILD_VARIANT_UPPER_FIRST_LETTER := $(shell echo $(BUILD_VARIANT_LOWER) | sed 's/.*/\u&/')
+# Build variant upper first letter
+BUILD_VARIANT_UFL := $(shell echo $(BUILD_VARIANT_LOWER) | sed 's/.*/\u&/')
 
 GIT_VER := $(shell cd $(EDK2_PLATFORMS_SRC_DIR) 2>/dev/null && \
 			git describe --tags --dirty --long --always | grep ampere | grep -v dirty | cut -d \- -f 1 | cut -d \v -f 2)
@@ -77,6 +79,11 @@ OUTPUT_FD_SIGNED_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore$(LINUXBOOT_F
 OUTPUT_BST_BIN := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.bin
 
 BOARD_SETTING ?= $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME)_board_setting.txt
+
+ATF_MAJOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c7 )
+ATF_MINOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c8-9 )
+ATF_BUILD = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c10-17 )
+ATF_S103 = $(shell expr $(ATF_MAJOR)$(ATF_MINOR) \> 102  | grep 1)
 
 # Targets
 define HELP_MSG
@@ -220,11 +227,11 @@ _tianocore_prepare: _check_source _check_tools _check_compiler _check_iasl
 	$(eval export WORKSPACE := $(CUR_DIR))
 	$(eval export PACKAGES_PATH := $(shell echo $(REQUIRE_EDK2_SRC) | sed 's/ /:/g'))
 	$(eval export $(EDK2_GCC_TAG)_AARCH64_PREFIX := $(COMPILER))
-	$(eval EDK2_FV_DIR := $(WORKSPACE)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/FV)
+	$(eval EDK2_FV_DIR := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/FV)
 
 _tianocore_sign_fd: _check_atf_tools
 	@echo "Creating certitficate for $(OUTPUT_FD_IMAGE)"
-	$(eval DBB_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
+	$(eval DBB_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
 	@$(CERTTOOL) -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key $(DBB_KEY) --nt-fw-cert $(OUTPUT_FD_IMAGE).crt --nt-fw $(OUTPUT_FD_IMAGE)
 	@$(FIPTOOL) create --nt-fw-cert $(OUTPUT_FD_IMAGE).crt --nt-fw $(OUTPUT_FD_IMAGE) $(OUTPUT_FD_SIGNED_IMAGE)
 	@rm -fr $(OUTPUT_FD_IMAGE).crt
@@ -232,10 +239,10 @@ _tianocore_sign_fd: _check_atf_tools
 ## tianocore_fd		: Tianocore FD image
 .PHONY: tianocore_fd
 tianocore_fd: _tianocore_prepare
-	@echo "Build Tianocore $(BUILD_VARIANT_UPPER_FIRST_LETTER) FD..."
+	@echo "Build Tianocore $(BUILD_VARIANT_UFL) FD..."
 	$(eval DSC_FILE := $(word 1,$(wildcard $(if $(shell echo $(BUILD_LINUXBOOT) | grep -w 1) \
-									,$(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME_UPPER_FIRST_LETTER)Linux*.dsc \
-									,$(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME_UPPER_FIRST_LETTER).dsc))))
+									,$(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME_UFL)Linux*.dsc \
+									,$(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME_UFL).dsc))))
 	$(if $(DSC_FILE),,$(error "DSC not found"))
 	$(eval MAJOR_VER := $(shell echo $(VER) | cut -d \. -f 1 ))
 	$(eval MINOR_VER := $(shell echo $(VER) | cut -d \. -f 2 ))
@@ -255,37 +262,38 @@ endif
 ## tianocore_img		: Tianocore Integrated image
 .PHONY: tianocore_img
 tianocore_img: _check_atf_slim _check_board_setting tianocore_fd
-	@echo "Build Tianocore $(BUILD_VARIANT_UPPER_FIRST_LETTER) Image.."
-	@dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $(OUTPUT_IMAGE)
-	@dd bs=1 conv=notrunc if=$(ATF_SLIM) of=$(OUTPUT_IMAGE)
-	@dd bs=1 seek=2031616 conv=notrunc if=$(OUTPUT_BST_BIN) of=$(OUTPUT_IMAGE)
+	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Image - ATF VERSION: $(ATF_MAJOR).$(ATF_MINOR).$(ATF_BUILD)..."
+	@dd bs=1024 count=$(if $(ATF_S103),6144,2048) if=/dev/zero | tr "\000" "\377" > $(OUTPUT_IMAGE)
+	@dd bs=1 seek=$(if $(ATF_S103),4194304,0) conv=notrunc if=$(ATF_SLIM) of=$(OUTPUT_IMAGE)
+	@dd bs=1 seek=$(if $(ATF_S103),6225920,2031616) conv=notrunc if=$(OUTPUT_BST_BIN) of=$(OUTPUT_IMAGE)
+
 ifeq ($(ATF_TBB),1)
 	@$(MAKE) -C $(SCRIPTS_DIR) _tianocore_sign_fd
-	@dd bs=1024 seek=2048 if=$(OUTPUT_FD_SIGNED_IMAGE) of=$(OUTPUT_IMAGE)
+	@dd bs=1024 seek=$(if $(ATF_S103),6144,2048) if=$(OUTPUT_FD_SIGNED_IMAGE) of=$(OUTPUT_IMAGE)
 	@rm -fr $(OUTPUT_FD_SIGNED_IMAGE)
 else
-	dd bs=1024 seek=2048 if=$(OUTPUT_FD_IMAGE) of=$(OUTPUT_IMAGE)
+	@dd bs=1024 seek=$(if $(ATF_S103),6144,2048) if=$(OUTPUT_FD_IMAGE) of=$(OUTPUT_IMAGE)
 endif
 
 ## tianocore_capsule	: Tianocore Capsule image
 .PHONY: tianocore_capsule
 tianocore_capsule: tianocore_img
-	@echo "Build Tianocore $(BUILD_VARIANT_UPPER_FIRST_LETTER) Capsule..."
-	$(eval TIANOCORE_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/$(BOARD_NAME)_tianocore_atf.img.signed)
+	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Capsule..."
+	$(eval TIANOCORE_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/$(BOARD_NAME)_tianocore_atf.img.signed)
 	$(eval OUTPUT_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
-	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
+	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
 	@echo "Sign Tianocore Image"
 	@openssl dgst -sha256 -sign $(DBU_KEY) -out $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE)
 	@cat $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE) > $(OUTPUT_IMAGE).signed
 	@cp -f $(OUTPUT_IMAGE).signed $(TIANOCORE_ATF_SIGNED_IMAGE)
 	# support 1.01 tag
-	$(eval EDK2_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UPPER_FIRST_LETTER)/$(BOARD_NAME)_atfedk2.img.signed)
+	$(eval EDK2_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_atfedk2.img.signed)
 	@ln -sf $(TIANOCORE_ATF_SIGNED_IMAGE) $(EDK2_ATF_SIGNED_IMAGE)
 
 	@echo "Build Capsule Image"
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) \
 		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_SIGNED_IMAGE) \
-		-p Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg/$(BOARD_NAME_UPPER_FIRST_LETTER)Capsule.dsc
+		-p Platform/Ampere/$(BOARD_NAME_UFL)Pkg/$(BOARD_NAME_UFL)Capsule.dsc
 	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
 	@rm -fr $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE).signed
 

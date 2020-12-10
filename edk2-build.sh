@@ -91,10 +91,22 @@ function build_tianocore_atf
         if [ "${BOARD_SETTING##*.}" = "bin" ]; then
             cp -a $BOARD_SETTING $DEST_DIR/${PLATFORM_LOWER}_board_setting.bin
         fi
-        dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
-        dd bs=1 conv=notrunc if=${ATF_IMAGE} of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
-        dd bs=1 seek=2031616 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
-        dd bs=1024 seek=2048 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+        ATF_MAJOR="`grep -aPo 'AMPC31.{0,14}' ${ATF_IMAGE} | tr -d '\0' | cut -c7`"
+        ATF_MINOR="`grep -aPo 'AMPC31.{0,14}' ${ATF_IMAGE} | tr -d '\0' | cut -c8-9`"
+        ATF_BUILD="`grep -aPo 'AMPC31.{0,14}' ${ATF_IMAGE} | tr -d '\0' | cut -c10-17`"
+        ATF_VER="${ATF_MAJOR}${ATF_MINOR}"
+        echo "ATF_VERSION = ${ATF_MAJOR}.${ATF_MINOR}.${ATF_BUILD} - ATF_VER: ${ATF_VER}"
+        if [ ${ATF_VER} -gt 102 ]; then
+            dd bs=1024 count=6144 if=/dev/zero | tr "\000" "\377" > $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+            dd bs=1 seek=4194304 conv=notrunc if=${ATF_IMAGE} of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+            dd bs=1 seek=6225920 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+            dd bs=1024 seek=6144 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+        else
+            dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+            dd bs=1 conv=notrunc if=${ATF_IMAGE} of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+            dd bs=1 seek=2031616 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+            dd bs=1024 seek=2048 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img
+        fi
         if [ $LINUXBOOT -eq 0 ]; then
             CAPSULE_DSC="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o capsule_dsc`"
             openssl dgst -sha256 -sign  $PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem -out $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img
