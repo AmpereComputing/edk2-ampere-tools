@@ -6,6 +6,7 @@
 #
 # EDK2 Makefile
 #
+SHELL := /bin/bash
 
 # Default Input variables
 ATF_TBB ?= 1
@@ -29,7 +30,7 @@ ATF_TOOLS_DIR := $(SCRIPTS_DIR)/toolchain/atf-tools
 COMPILER_DIR := $(SCRIPTS_DIR)/toolchain/ampere
 IASL_DIR := $(SCRIPTS_DIR)/toolchain/iasl
 AARCH64_TOOLS_DIR := $(COMPILER_DIR)/bin
-export PATH := $(PATH):$(IASL_DIR):$(ATF_TOOLS_DIR)
+export PATH := $(IASL_DIR):$(ATF_TOOLS_DIR):$(PATH)
 
 # Compiler variables
 EDK2_GCC_TAG := GCC5
@@ -48,7 +49,7 @@ IASL := iasl
 FIPTOOL := fiptool
 CERTTOOL := cert_create
 NVGENCMD := python $(SCRIPTS_DIR)/nvparam.py
-EXECUTABLES := openssl git cut sed awk wget tar bison gcc g++
+EXECUTABLES := openssl git cut sed awk wget tar bison gcc g++ lzma
 
 # Build variant variables
 BUILD_VARIANT := $(if $(shell echo $(DEBUG) | grep -w 1),DEBUG,RELEASE)
@@ -68,7 +69,7 @@ BUILD := $(if $(BUILD),$(BUILD),100)
 # File path variables
 LINUXBOOT_FMT := $(if $(shell echo $(BUILD_LINUXBOOT) | grep -w 1),_linuxboot,)
 OUTPUT_VARIANT := $(if $(shell echo $(DEBUG) | grep -w 1),_debug,)
-OUTPUT_BIN_DIR := $(if $(DEST_DIR),$(DEST_DIR),$(CUR_DIR)/BUILDS/$(BOARD_NAME)_tianocore_atf$(OUTPUT_VARIANT)_$(VER).$(BUILD))
+OUTPUT_BIN_DIR := $(if $(DEST_DIR),$(DEST_DIR),$(CUR_DIR)/BUILDS/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD))
 
 OUTPUT_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).img
 OUTPUT_FD_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).fd
@@ -110,7 +111,7 @@ all: tianocore_capsule linuxboot_img
 
 ## clean			: Clean basetool and tianocore build
 .PHONY: clean
-clean:
+clean: linuxboot_clean
 	@echo "Tianocore clean BaseTools..."
 	$(MAKE) -C $(EDK2_SRC_DIR)/BaseTools clean
 
@@ -139,7 +140,7 @@ _check_compiler:
 ifeq ($(or $(shell echo $(COMPILER)gcc | grep -v $(AARCH64_TOOLS_DIR)), \
 		   $(wildcard $(AARCH64_TOOLS_DIR)/$(AMPERE_COMPILER_PREFIX)gcc)),)
 	@echo -e "Not Found\nDownloading and setting Ampere compiler..."
-	@mkdir -p $(COMPILER_DIR)
+	@rm -rf $(COMPILER_DIR) && mkdir -p $(COMPILER_DIR)
 	@wget -O - -q $(COMPILER_URL) | tar xJf - -C $(COMPILER_DIR) --strip-components=1 --checkpoint=.100
 else
 	@echo "$(shell $(COMPILER)gcc -dumpmachine) $(shell $(COMPILER)gcc -dumpversion)"
@@ -154,7 +155,7 @@ ifneq ($(or $(and $(shell which $(CERTTOOL) 2>/dev/null),$(shell which $(FIPTOOL
 	@echo "OK"
 else
 	@echo -e "Not Found\nDownloading and building atf tools..."
-	@mkdir -p $(SCRIPTS_DIR)/AtfTools
+	@rm -rf $(SCRIPTS_DIR)/AtfTools && mkdir -p $(SCRIPTS_DIR)/AtfTools
 	@rm -rf $(ATF_TOOLS_DIR) && mkdir -p $(ATF_TOOLS_DIR)
 	@cd $(SCRIPTS_DIR)/AtfTools && git init && git remote add origin -f $(ATF_REPO_URL) && git config core.sparseCheckout true
 	@echo -e $$ATF_TOOLS_LIST > $(SCRIPTS_DIR)/AtfTools/.git/info/sparse-checkout
@@ -209,7 +210,6 @@ endif
 
 _tianocore_prepare: _check_source _check_tools _check_compiler _check_iasl
 	$(if $(wildcard $(EDK2_SRC_DIR)/BaseTools/Source/C/bin),,$(MAKE) -C $(EDK2_SRC_DIR)/BaseTools -j $(NUM_THREADS))
-
 	$(eval export WORKSPACE := $(CUR_DIR))
 	$(eval export PACKAGES_PATH := $(shell echo $(REQUIRE_EDK2_SRC) | sed 's/ /:/g'))
 	$(eval export $(EDK2_GCC_TAG)_AARCH64_PREFIX := $(COMPILER))
@@ -233,6 +233,9 @@ tianocore_fd: _tianocore_prepare
 	$(eval MAJOR_VER := $(shell echo $(VER) | cut -d \. -f 1 ))
 	$(eval MINOR_VER := $(shell echo $(VER) | cut -d \. -f 2 ))
 	$(eval EDK2_FD_IMAGE := $(EDK2_FV_DIR)/BL33_$(BOARD_NAME_UPPER)_UEFI.fd)
+ifeq ($(BUILD_LINUXBOOT),1)
+	make -C $(SCRIPTS_DIR) linuxboot_bin
+endif
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) -n $(NUM_THREADS) \
 		-D FIRMWARE_VER="$(MAJOR_VER).$(MINOR_VER).$(BUILD) Build $(shell date '+%Y%m%d')" \
 		-D MAJOR_VER=$(MAJOR_VER) -D MINOR_VER=$(MINOR_VER) -D SECURE_BOOT_ENABLE \
@@ -276,5 +279,7 @@ tianocore_capsule: tianocore_img
 		-p Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg/$(BOARD_NAME_UPPER_FIRST_LETTER)Capsule.dsc
 	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
 	@rm -fr $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE).signed
+
+include $(SCRIPTS_DIR)/LinuxBoot.mk
 
 # end of makefile

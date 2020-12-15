@@ -242,9 +242,27 @@ function get_atf_tools
     git config core.sparseCheckout true
     echo -ne "include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool" > .git/info/sparse-checkout
     git -C . checkout --track origin/master
-    make -C tools/cert_create CRTTOOL=cert_create
-    make -C tools/fiptool FIPTOOL=fiptool
+    make -C tools/cert_create -j $NUM_THREADS CRTTOOL=cert_create
+    make -C tools/fiptool -j $NUM_THREADS FIPTOOL=fiptool
     return 0
+}
+
+function check_golang
+{
+    GOLANG_VER=1.15.6
+    GOLANG_ARCH=amd64
+    GOLANG_INSTALL_DIR=${TOOLSDIR}/toolchain
+    echo "Checking golang ver ${GOLANG_VER}... build arch: ${BUILD_ARCH}"
+    if [ -e "${GOLANG_INSTALL_DIR}/go/bin/go" ]; then
+        return 0
+    fi
+    if [ "$BUILD_ARCH" = "AARCH64" ]; then
+        GOLANG_ARCH=arm64
+    fi
+    GOLANG_TAR=go${GOLANG_VER}.linux-${GOLANG_ARCH}.tar.gz
+    GOLANG_URL=https://golang.org/dl/${GOLANG_TAR}
+    echo "Downloading ${GOLANG_URL}..."
+    wget -O - -q ${GOLANG_URL} | tar xzf - -C ${GOLANG_INSTALL_DIR}
 }
 
 function check_ampere_toolchain
@@ -326,7 +344,7 @@ function check_iasl_tool
     wget -O - -q ${IASL_URL} | tar xzf - -C ${TOOLSDIR}
     if [ $? -eq 0 ]; then
         echo "Compiling ${IASL_NAME}..."
-        make -C ${TOOLSDIR}/${IASL_NAME} -j8 HOST=_CYGWIN
+        make -C ${TOOLSDIR}/${IASL_NAME} -j $NUM_THREADS HOST=_CYGWIN
         if [ $? -eq 0 ]; then
             mkdir -p ${TOOLSDIR}/toolchain/iasl
             echo "Deploy to ${TOOLSDIR}/iasl..."
@@ -343,5 +361,16 @@ function check_iasl_tool
     echo "       $ tar xzf acpica-unix2-20200110.tar.gz" >&2
     echo "       $ make -C acpica-unix2-20200110 -j8" >&2
     echo "       $ cp generate/unix/bin/iasl edk2-ampere-tools/toolchain/iasl/" >&2
+    return 1
+}
+
+function check_lzma_tool
+{
+    TOOLSDIR="$1"
+    if which lzma >/dev/null 2>&1; then
+        return 0
+    fi
+    echo "ERROR: can't locate the lzma tool" >&2
+    echo "       please install lzma tool" >&2
     return 1
 }

@@ -31,6 +31,7 @@ TOOLCHAIN="gcc"            # Override with -T
 WORKSPACE=
 EDK2_DIR=
 PLATFORMS_DIR=
+MAINBOARDS_DIR=
 BOARD_SETTING=
 CLEAN=0
 NON_OSI_DIR=
@@ -54,7 +55,7 @@ function get_platform_version
             return 0
         fi
     fi
-    $PLATFORM_VER="0.00.100"
+    PLATFORM_VER="0.00.100"
     # default version 0.00.100
     echo $PLATFORM_VER
 }
@@ -112,6 +113,52 @@ function build_tianocore_atf
     else
         ls -l $DEST_DIR
     fi
+}
+
+function build_linuxboot_binary
+{
+    PLATFORM_LOWER="${board,,}"
+    # locate mainboards
+    if [ -z "$MAINBOARDS_DIR" -a -d "$PWD"/mainboards ]; then
+        MAINBOARDS_DIR="$PWD"/mainboards
+    fi
+    if [ -z "$MAINBOARDS_DIR" -a X"$WORKSPACE" = X"$TOOLS_DIR" ]; then
+        if [ -d "$PWD"/../mainboards ]; then
+            MAINBOARDS_DIR="`readlink -f $PWD/../mainboards`"
+        elif [ -d "$TOOLS_DIR"/../mainboards ]; then
+            MAINBOARDS_DIR="`readlink -f $TOOLS_DIR/../mainboards`"
+        fi
+    fi
+    if [ -z "$MAINBOARDS_DIR" ]; then
+        if [ X"$WORKSPACE" = X"$TOOLS_DIR" ]; then
+            MAINBOARDS_DIR="`readlink -f $TOOLS_DIR/../mainboards`"
+            cd $TOOLS_DIR/..
+        else
+            MAINBOARDS_DIR="`readlink -f $WORKSPACE/mainboards`"
+            cd $WORKSPACE
+        fi
+    fi
+    EDK2_FLASHKERNEL_DIR="${PLATFORMS_DIR}/Platform/Ampere/LinuxBootPkg/AArch64"
+    if [ ! -d "$MAINBOARDS_DIR" ]; then
+        git clone --branch master https://github.com/linuxboot/mainboards.git
+    fi
+    check_lzma_tool ${TOOLS_DIR}
+    RESULT=$?
+    if [ $RESULT -ne 0 ]; then
+        exit 1
+    fi
+    echo "Clean up LinuxBoot binaries..."
+    rm -rf ${MAINBOARDS_DIR}/mainboards/ampere/${PLATFORM_LOWER}/{flashkernel,flashinitramfs.*}
+    if [ -d ${MAINBOARDS_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux ]; then
+        $(MAKE) -C ${MAINBOARDS_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux && distclean
+    fi
+    make -C $MAINBOARDS_DIR/ampere/${PLATFORM_LOWER} fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
+    RESULT=$?
+    if [ $RESULT -ne 0 ]; then
+        echo "ERROR: compile LinuxBoot binaries issue" >&2
+        exit 1
+    fi
+    cp -f $MAINBOARDS_DIR/ampere/${PLATFORM_LOWER}/flashkernel ${EDK2_FLASHKERNEL_DIR}
 }
 
 function do_build
@@ -222,6 +269,9 @@ function do_build
     fi
     echo "Toolchain prefix: ${PLATFORM_TOOLCHAIN}_${PLATFORM_ARCH}_PREFIX=$CROSS_COMPILE"
     export PACKAGES_PATH="$PLATFORM_PACKAGES_PATH"
+    if [ $LINUXBOOT -eq 1 ]; then
+        build_linuxboot_binary
+    fi
     for target in "${TARGETS[@]}" ; do
         if [ X"$PLATFORM_PREBUILD_CMDS" != X"" ]; then
             echo "Run pre-build commands:"
@@ -333,6 +383,9 @@ function configure_paths
     if [ -z "$NON_OSI_DIR" -a -d "$PWD"/edk2-non-osi ]; then
         NON_OSI_DIR="$PWD"/edk2-non-osi
     fi
+    if [ -z "$NON_OSI_DIR" -a -d "$PWD"/../edk2-non-osi ]; then
+        NON_OSI_DIR="`readlink -f $PWD/../edk2-non-osi`"
+    fi
     if [ -n "$NON_OSI_DIR" ]; then
         GLOBAL_PACKAGES_PATH="$GLOBAL_PACKAGES_PATH:$NON_OSI_DIR"
     fi
@@ -425,6 +478,12 @@ function check_tools
     RET=$?
     if [ $RET -ne 0 ]; then
         exit 1
+    fi
+    if [ $LINUXBOOT -eq 1 ]; then
+        check_golang
+        export GOPATH=${TOOLS_DIR}/toolchain/gosource
+        mkdir -p ${GOPATH}
+        export PATH=${GOPATH}/bin:${TOOLS_DIR}/toolchain/go/bin:$PATH
     fi
 }
 
