@@ -49,7 +49,7 @@ IASL := iasl
 FIPTOOL := fiptool
 CERTTOOL := cert_create
 NVGENCMD := python $(SCRIPTS_DIR)/nvparam.py
-EXECUTABLES := openssl git cut sed awk wget tar bison gcc g++ lzma
+EXECUTABLES := openssl git cut sed awk wget tar bison gcc g++
 
 # Build variant variables
 BUILD_VARIANT := $(if $(shell echo $(DEBUG) | grep -w 1),DEBUG,RELEASE)
@@ -85,6 +85,7 @@ Ampere EDK2 Tools
 Usage: make <Targets> [Options]
 Options:
 	ATF_SLIM=<Path>         : Path to atf.slim image
+	LINUXBOOT_BIN=<Path>    : Path to linuxboot binary (flashkernel)
 	BOARD_SETTING=<Path>    : Path to board_setting.[txt/bin]
 	                          - Default: $(BOARD_NAME)_board_setting.txt
 	BUILD=<Build>           : Specify image build id
@@ -111,7 +112,7 @@ all: tianocore_capsule linuxboot_img
 
 ## clean			: Clean basetool and tianocore build
 .PHONY: clean
-clean: linuxboot_clean
+clean:
 	@echo "Tianocore clean BaseTools..."
 	$(MAKE) -C $(EDK2_SRC_DIR)/BaseTools clean
 
@@ -120,7 +121,7 @@ clean: linuxboot_clean
 
 ## linuxboot_img		: Linuxboot image
 .PHONY: linuxboot_img
-linuxboot_img:
+linuxboot_img: _check_linuxboot_bin
 	@$(MAKE) -C $(SCRIPTS_DIR) tianocore_img BUILD_LINUXBOOT=1 CUR_DIR=$(CUR_DIR)
 
 _check_source:
@@ -189,6 +190,12 @@ ifneq ("$(suffix $(wildcard $(ATF_SLIM)))", ".slim")
 	$(error "ATF_SLIM invalid")
 endif
 
+_check_linuxboot_bin:
+	@echo "Checking LINUXBOOT_BIN...OK"
+ifeq ($(wildcard $(LINUXBOOT_BIN)),)
+	$(error "LINUXBOOT_BIN invalid")
+endif
+
 _check_board_setting:
 	@echo "Checking BOARD_SETTING...OK"
 	$(eval OUTPUT_BST_TXT := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.txt)
@@ -234,7 +241,9 @@ tianocore_fd: _tianocore_prepare
 	$(eval MINOR_VER := $(shell echo $(VER) | cut -d \. -f 2 ))
 	$(eval EDK2_FD_IMAGE := $(EDK2_FV_DIR)/BL33_$(BOARD_NAME_UPPER)_UEFI.fd)
 ifeq ($(BUILD_LINUXBOOT),1)
-	make -C $(SCRIPTS_DIR) linuxboot_bin
+ifneq ($(wildcard $(LINUXBOOT_BIN)),)
+	@cp $(LINUXBOOT_BIN) $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/LinuxBootPkg/AArch64/flashkernel
+endif
 endif
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) -n $(NUM_THREADS) \
 		-D FIRMWARE_VER="$(MAJOR_VER).$(MINOR_VER).$(BUILD) Build $(shell date '+%Y%m%d')" \
@@ -279,7 +288,5 @@ tianocore_capsule: tianocore_img
 		-p Platform/Ampere/$(BOARD_NAME_UPPER_FIRST_LETTER)Pkg/$(BOARD_NAME_UPPER_FIRST_LETTER)Capsule.dsc
 	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
 	@rm -fr $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE).signed
-
-include $(SCRIPTS_DIR)/LinuxBoot.mk
 
 # end of makefile

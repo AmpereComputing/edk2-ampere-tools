@@ -102,7 +102,7 @@ function build_tianocore_atf
             # support 1.01 tag
             ln -sf $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed $WS_BOARD/${PLATFORM_LOWER}_atfedk2.img.signed
             build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
-				-D UEFI_ATF_IMAGE=$WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
+                -D UEFI_ATF_IMAGE=$WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
             cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.cap
         fi
         rm -fr $DEST_DIR/*.img.signed $DEST_DIR/*.img.sig $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed
@@ -113,52 +113,6 @@ function build_tianocore_atf
     else
         ls -l $DEST_DIR
     fi
-}
-
-function build_linuxboot_binary
-{
-    PLATFORM_LOWER="${board,,}"
-    # locate mainboards
-    if [ -z "$MAINBOARDS_DIR" -a -d "$PWD"/mainboards ]; then
-        MAINBOARDS_DIR="$PWD"/mainboards
-    fi
-    if [ -z "$MAINBOARDS_DIR" -a X"$WORKSPACE" = X"$TOOLS_DIR" ]; then
-        if [ -d "$PWD"/../mainboards ]; then
-            MAINBOARDS_DIR="`readlink -f $PWD/../mainboards`"
-        elif [ -d "$TOOLS_DIR"/../mainboards ]; then
-            MAINBOARDS_DIR="`readlink -f $TOOLS_DIR/../mainboards`"
-        fi
-    fi
-    if [ -z "$MAINBOARDS_DIR" ]; then
-        if [ X"$WORKSPACE" = X"$TOOLS_DIR" ]; then
-            MAINBOARDS_DIR="`readlink -f $TOOLS_DIR/../mainboards`"
-            cd $TOOLS_DIR/..
-        else
-            MAINBOARDS_DIR="`readlink -f $WORKSPACE/mainboards`"
-            cd $WORKSPACE
-        fi
-    fi
-    EDK2_FLASHKERNEL_DIR="${PLATFORMS_DIR}/Platform/Ampere/LinuxBootPkg/AArch64"
-    if [ ! -d "$MAINBOARDS_DIR" ]; then
-        git clone --branch master https://github.com/linuxboot/mainboards.git
-    fi
-    check_lzma_tool ${TOOLS_DIR}
-    RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-        exit 1
-    fi
-    echo "Clean up LinuxBoot binaries..."
-    rm -rf ${MAINBOARDS_DIR}/mainboards/ampere/${PLATFORM_LOWER}/{flashkernel,flashinitramfs.*}
-    if [ -d ${MAINBOARDS_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux ]; then
-        $(MAKE) -C ${MAINBOARDS_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux && distclean
-    fi
-    make -C $MAINBOARDS_DIR/ampere/${PLATFORM_LOWER} fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
-    RESULT=$?
-    if [ $RESULT -ne 0 ]; then
-        echo "ERROR: compile LinuxBoot binaries issue" >&2
-        exit 1
-    fi
-    cp -f $MAINBOARDS_DIR/ampere/${PLATFORM_LOWER}/flashkernel ${EDK2_FLASHKERNEL_DIR}
 }
 
 function do_build
@@ -270,7 +224,9 @@ function do_build
     echo "Toolchain prefix: ${PLATFORM_TOOLCHAIN}_${PLATFORM_ARCH}_PREFIX=$CROSS_COMPILE"
     export PACKAGES_PATH="$PLATFORM_PACKAGES_PATH"
     if [ $LINUXBOOT -eq 1 ]; then
-        build_linuxboot_binary
+        if [ -e ${LINUXBOOT_BIN} ]; then
+            cp -f ${LINUXBOOT_BIN} ${PLATFORMS_DIR}/Platform/Ampere/LinuxBootPkg/AArch64/flashkernel
+        fi
     fi
     for target in "${TARGETS[@]}" ; do
         if [ X"$PLATFORM_PREBUILD_CMDS" != X"" ]; then
@@ -479,12 +435,6 @@ function check_tools
     if [ $RET -ne 0 ]; then
         exit 1
     fi
-    if [ $LINUXBOOT -eq 1 ]; then
-        check_golang
-        export GOPATH=${TOOLS_DIR}/toolchain/gosource
-        mkdir -p ${GOPATH}
-        export PATH=${GOPATH}/bin:${TOOLS_DIR}/toolchain/go/bin:$PATH
-    fi
 }
 
 function usage
@@ -590,6 +540,15 @@ while [ "$1" != "" ]; do
         --linuxboot)
             LINUXBOOT=1
             ;;
+        --linuxboot-bin) # linux binary from https://github.com/linuxboot/mainboards.git
+            shift
+            LINUXBOOT=1
+            LINUXBOOT_BIN="`readlink -f $1`"
+            if [ ! -e "${LINUXBOOT_BIN}" ]; then
+                echo "ERROR: LinuxBoot file '$LINUXBOOT_BIN' not found" >&2
+                exit 1
+            fi
+            ;;
         --ver) # MANOR_VER. MAJOR_VER: 1.01
             shift
             VER=$1
@@ -605,6 +564,10 @@ while [ "$1" != "" ]; do
         --atf-image) # ampere atf image
             shift
             ATF_IMAGE="`readlink -f $1`"
+            if [ ! -e "${ATF_IMAGE}" ]; then
+                echo "ERROR: ATF SLIM file '$ATF_IMAGE' not found" >&2
+                exit 1
+            fi
             ;;
         -T)     # Set specific toolchain tag, or clang/gcc for autoselection
             shift
