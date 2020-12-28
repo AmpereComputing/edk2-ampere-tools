@@ -74,6 +74,7 @@ OUTPUT_VARIANT := $(if $(shell echo $(DEBUG) | grep -w 1),_debug,)
 OUTPUT_BIN_DIR := $(if $(DEST_DIR),$(DEST_DIR),$(CUR_DIR)/BUILDS/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD))
 
 OUTPUT_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).img
+OUTPUT_RAW_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).img.raw
 OUTPUT_FD_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).fd
 OUTPUT_FD_SIGNED_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).fd.signed
 OUTPUT_BST_BIN := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.bin
@@ -83,7 +84,7 @@ BOARD_SETTING ?= $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME)_board_setting.txt
 ATF_MAJOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c7 )
 ATF_MINOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c8-9 )
 ATF_BUILD = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c10-17 )
-ATF_S103 = $(shell expr $(ATF_MAJOR)$(ATF_MINOR) \> 102  | grep 1)
+ATF_VER = $(ATF_MAJOR)$(ATF_MINOR)
 
 # Targets
 define HELP_MSG
@@ -263,17 +264,24 @@ endif
 .PHONY: tianocore_img
 tianocore_img: _check_atf_slim _check_board_setting tianocore_fd
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Image - ATF VERSION: $(ATF_MAJOR).$(ATF_MINOR).$(ATF_BUILD)..."
-	@dd bs=1024 count=$(if $(ATF_S103),6144,2048) if=/dev/zero | tr "\000" "\377" > $(OUTPUT_IMAGE)
-	@dd bs=1 seek=$(if $(ATF_S103),4194304,0) conv=notrunc if=$(ATF_SLIM) of=$(OUTPUT_IMAGE)
-	@dd bs=1 seek=$(if $(ATF_S103),6225920,2031616) conv=notrunc if=$(OUTPUT_BST_BIN) of=$(OUTPUT_IMAGE)
+	@dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $(OUTPUT_RAW_IMAGE)
+	@dd bs=1 seek=0 conv=notrunc if=$(ATF_SLIM) of=$(OUTPUT_RAW_IMAGE)
+	@dd bs=1 seek=2031616 conv=notrunc if=$(OUTPUT_BST_BIN) of=$(OUTPUT_RAW_IMAGE)
 
 ifeq ($(ATF_TBB),1)
 	@$(MAKE) -C $(SCRIPTS_DIR) _tianocore_sign_fd
-	@dd bs=1024 seek=$(if $(ATF_S103),6144,2048) if=$(OUTPUT_FD_SIGNED_IMAGE) of=$(OUTPUT_IMAGE)
+	@dd bs=1024 seek=2048 if=$(OUTPUT_FD_SIGNED_IMAGE) of=$(OUTPUT_RAW_IMAGE)
 	@rm -fr $(OUTPUT_FD_SIGNED_IMAGE)
 else
-	@dd bs=1024 seek=$(if $(ATF_S103),6144,2048) if=$(OUTPUT_FD_IMAGE) of=$(OUTPUT_IMAGE)
+	@dd bs=1024 seek=2048 if=$(OUTPUT_FD_IMAGE) of=$(OUTPUT_RAW_IMAGE)
 endif
+
+	@if [ $(ATF_VER) -eq 102 ] || [ $(ATF_VER) -eq 101 ]; then \
+		cp $(OUTPUT_RAW_IMAGE) $(OUTPUT_IMAGE); \
+	else \
+		dd if=/dev/zero bs=1024 count=4096 | tr "\000" "\377" > $(OUTPUT_IMAGE); \
+		dd bs=1 seek=4194304 conv=notrunc if=$(OUTPUT_RAW_IMAGE) of=$(OUTPUT_IMAGE); \
+	fi
 
 ## tianocore_capsule	: Tianocore Capsule image
 .PHONY: tianocore_capsule
@@ -283,9 +291,9 @@ tianocore_capsule: tianocore_img
 	$(eval OUTPUT_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
 	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
 	@echo "Sign Tianocore Image"
-	@openssl dgst -sha256 -sign $(DBU_KEY) -out $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE)
-	@cat $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE) > $(OUTPUT_IMAGE).signed
-	@cp -f $(OUTPUT_IMAGE).signed $(TIANOCORE_ATF_SIGNED_IMAGE)
+	@openssl dgst -sha256 -sign $(DBU_KEY) -out $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE)
+	@cat $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE) > $(OUTPUT_RAW_IMAGE).signed
+	@cp -f $(OUTPUT_RAW_IMAGE).signed $(TIANOCORE_ATF_SIGNED_IMAGE)
 	# support 1.01 tag
 	$(eval EDK2_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_atfedk2.img.signed)
 	@ln -sf $(TIANOCORE_ATF_SIGNED_IMAGE) $(EDK2_ATF_SIGNED_IMAGE)
@@ -295,6 +303,6 @@ tianocore_capsule: tianocore_img
 		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_SIGNED_IMAGE) \
 		-p Platform/Ampere/$(BOARD_NAME_UFL)Pkg/$(BOARD_NAME_UFL)Capsule.dsc
 	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
-	@rm -fr $(OUTPUT_IMAGE).sig $(OUTPUT_IMAGE).signed
+	@rm -fr $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).signed $(OUTPUT_RAW_IMAGE)
 
 # end of makefile

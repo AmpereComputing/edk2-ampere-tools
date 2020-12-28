@@ -251,7 +251,7 @@ function check_golang
 {
     GOLANG_VER=1.15.6
     GOLANG_ARCH=amd64
-    GOLANG_INSTALL_DIR=${TOOLSDIR}/toolchain
+    GOLANG_INSTALL_DIR=${TOOLS_DIR}/toolchain
     echo "Checking golang ver ${GOLANG_VER}... build arch: ${BUILD_ARCH}"
     if [ -e "${GOLANG_INSTALL_DIR}/go/bin/go" ]; then
         return 0
@@ -261,13 +261,14 @@ function check_golang
     fi
     GOLANG_TAR=go${GOLANG_VER}.linux-${GOLANG_ARCH}.tar.gz
     GOLANG_URL=https://golang.org/dl/${GOLANG_TAR}
+    mkdir -p ${GOLANG_INSTALL_DIR}
     echo "Downloading ${GOLANG_URL}..."
     wget -O - -q ${GOLANG_URL} | tar xzf - -C ${GOLANG_INSTALL_DIR}
 }
 
 function check_ampere_toolchain
 {
-    TOOLSDIR="$1"
+    TOOLS_DIR="$1"
     AMP_GCC="$2"
     if which ${AMP_GCC} >/dev/null 2>&1; then
         AMP_VER="`${AMP_GCC} --version | grep Ampere | grep dynamic-nosysroot`"
@@ -284,8 +285,8 @@ function check_ampere_toolchain
         TOOLCHAIN_URL=https://cdn.amperecomputing.com/tools/compilers/native/8.3.0/${TOOLCHAIN_TAR}
     fi
     echo "Downloading ${TOOLCHAIN_URL}..."
-    mkdir -p ${TOOLSDIR}/toolchain/ampere
-    wget -O - -q ${TOOLCHAIN_URL} | tar --strip-components=1 -xJf - -C ${TOOLSDIR}/toolchain/ampere
+    mkdir -p ${TOOLS_DIR}/toolchain/ampere
+    wget -O - -q ${TOOLCHAIN_URL} | tar --strip-components=1 -xJf - -C ${TOOLS_DIR}/toolchain/ampere
     if ${AMP_GCC} -v >/dev/null 2>&1; then
         return 0
     fi
@@ -299,17 +300,17 @@ function check_ampere_toolchain
 
 function check_atf_tool
 {
-    TOOLSDIR="$1"
+    TOOLS_DIR="$1"
     if which cert_create >/dev/null 2>&1; then
         echo "---> cert_create, fiptool"
         return 0
     fi
-    get_atf_tools ${TOOLSDIR}/AtfTools
-    mkdir -p ${TOOLSDIR}/toolchain/atf-tools
-    cp -a ${ATF_TOOLS}/tools/cert_create/cert_create ${TOOLSDIR}/toolchain/atf-tools/
-    cp -a ${ATF_TOOLS}/tools/fiptool/fiptool ${TOOLSDIR}/toolchain/atf-tools/
+    get_atf_tools ${TOOLS_DIR}/AtfTools
+    mkdir -p ${TOOLS_DIR}/toolchain/atf-tools
+    cp -a ${ATF_TOOLS}/tools/cert_create/cert_create ${TOOLS_DIR}/toolchain/atf-tools/
+    cp -a ${ATF_TOOLS}/tools/fiptool/fiptool ${TOOLS_DIR}/toolchain/atf-tools/
     if which cert_create >/dev/null 2>&1; then
-        rm -fr ${TOOLSDIR}/AtfTools
+        rm -fr ${TOOLS_DIR}/AtfTools
         return 0
     fi
     echo "ERROR: can't locate the cert_create, fiptool tools" >&2
@@ -328,7 +329,7 @@ function check_atf_tool
 
 function check_iasl_tool
 {
-    TOOLSDIR="$1"
+    TOOLS_DIR="$1"
     if which iasl >/dev/null 2>&1; then
         IASL_VER="`iasl -v | grep version | cut -d ' ' -f 5`"
         if [ X"$IASL_VER" = X"20200110" ]; then
@@ -340,17 +341,17 @@ function check_iasl_tool
     IASL_NAME=acpica-unix2-${IASL_VER}
     IASL_URL=https://acpica.org/sites/acpica/files/${IASL_NAME}.tar.gz
     echo "Downloading ${IASL_URL}..."
-    rm -fr ${TOOLSDIR}/${IASL_NAME}
-    wget -O - -q ${IASL_URL} | tar xzf - -C ${TOOLSDIR}
+    rm -fr ${TOOLS_DIR}/${IASL_NAME}
+    wget -O - -q ${IASL_URL} | tar xzf - -C ${TOOLS_DIR}
     if [ $? -eq 0 ]; then
         echo "Compiling ${IASL_NAME}..."
-        make -C ${TOOLSDIR}/${IASL_NAME} -j $NUM_THREADS HOST=_CYGWIN
+        make -C ${TOOLS_DIR}/${IASL_NAME} -j $NUM_THREADS HOST=_CYGWIN
         if [ $? -eq 0 ]; then
-            mkdir -p ${TOOLSDIR}/toolchain/iasl
-            echo "Deploy to ${TOOLSDIR}/iasl..."
-            cp ${TOOLSDIR}/${IASL_NAME}/generate/unix/bin/iasl ${TOOLSDIR}/toolchain/iasl/
+            mkdir -p ${TOOLS_DIR}/toolchain/iasl
+            echo "Deploy to ${TOOLS_DIR}/iasl..."
+            cp ${TOOLS_DIR}/${IASL_NAME}/generate/unix/bin/iasl ${TOOLS_DIR}/toolchain/iasl/
             if iasl -v >/dev/null 2>&1; then
-                rm -fr ${TOOLSDIR}/${IASL_NAME}
+                rm -fr ${TOOLS_DIR}/${IASL_NAME}
                 return 0
             fi
         fi
@@ -366,7 +367,7 @@ function check_iasl_tool
 
 function check_lzma_tool
 {
-    TOOLSDIR="$1"
+    TOOLS_DIR="$1"
     if which lzma >/dev/null 2>&1; then
         return 0
     fi

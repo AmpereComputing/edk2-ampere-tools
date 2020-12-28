@@ -84,8 +84,8 @@ $ fiptool create --nt-fw-cert BUILDS/jade_tianocore_atf/jade_tianocore.fd.crt --
 
 ## Integrating Board Setting and Ampere's Arm Trusted Firmware (ATF)
 
-You need to obtain Ampere ATF image and Board Setting file compatible with 
-this vesion of Ampere EDK2 in order to build a final firmware image. 
+You need to obtain Ampere ATF image and Board Setting file compatible with
+this vesion of Ampere EDK2 in order to build a final firmware image.
 
 Contact developer@amperecomputing.com for information.
 
@@ -103,6 +103,17 @@ $ python nvparam.py -f Platform/Ampere/JadePkg/jade_board_setting.txt -o BUILDS/
 
 ### Build integrated UEFI + Board Setting + ATF image
 
+For Ampere ATF 1.03 and later version
+```
+$ dd bs=1024 count=6144 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ dd bs=1 seek=4194304 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ dd bs=1 seek=6225920 conv=notrunc if=BUILDS/jade_tianocore_atf/jade_board_setting.bin of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ dd bs=1024 seek=6144 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+
+Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+```
+
+For Ampere ATF 1.02 version
 ```
 $ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 $ dd bs=1 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
@@ -110,13 +121,17 @@ $ dd bs=1 seek=2031616 conv=notrunc if=BUILDS/jade_tianocore_atf/jade_board_sett
 $ dd bs=1024 seek=2048 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 
 Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
-
 ```
+
 ### Build Tianocore Capsule
 
 ```
-$ openssl dgst -sha256 -sign Platform/Ampere/JadePkg/TestKeys/Dbu_AmpereTest.priv.pem -out BUILDS/jade_tianocore_atf/jade_tianocore_atf.img.sig BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
-$ cat BUILDS/jade_tianocore_atf/jade_tianocore_atf.img.sig BUILDS/jade_tianocore_atf/jade_tianocore_atf.img > Build/Jade/RELEASE_GCC5/jade_tianocore_atf.img.signed
+$ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
+$ dd bs=1 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
+$ dd bs=1 seek=2031616 conv=notrunc if=BUILDS/jade_tianocore_atf/jade_board_setting.bin of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
+$ dd bs=1024 seek=2048 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
+$ openssl dgst -sha256 -sign Platform/Ampere/JadePkg/TestKeys/Dbu_AmpereTest.priv.pem -out BUILDS/jade_tianocore_atf/jade_tianocore_atf.img.sig BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
+$ cat BUILDS/jade_tianocore_atf/jade_tianocore_atf.img.sig BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img > Build/Jade/RELEASE_GCC5/jade_tianocore_atf.img.signed
 $ build -a AARCH64 -t GCC5 -b RELEASE -p Platform/Ampere/JadePkg/JadeCapsule.dsc -D UEFI_ATF_IMAGE=Build/Jade/RELEASE_GCC5/jade_tianocore_atf.img.signed
 $ cp Build/Jade/RELEASE_GCC5/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap
 
