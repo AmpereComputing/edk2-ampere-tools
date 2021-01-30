@@ -84,7 +84,6 @@ BOARD_SETTING ?= $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME)_board_setting.txt
 ATF_MAJOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c7 )
 ATF_MINOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c8-9 )
 ATF_BUILD = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c10-17 )
-ATF_VER = $(ATF_MAJOR)$(ATF_MINOR)
 
 # Targets
 define HELP_MSG
@@ -276,11 +275,11 @@ else
 	@dd bs=1024 seek=2048 if=$(OUTPUT_FD_IMAGE) of=$(OUTPUT_RAW_IMAGE)
 endif
 
-	@if [ $(ATF_VER) -eq 102 ] || [ $(ATF_VER) -eq 101 ]; then \
-		cp $(OUTPUT_RAW_IMAGE) $(OUTPUT_IMAGE); \
-	else \
+	@if [ "$(ATF_MAJOR).$(ATF_MINOR)" = "1.03" ] || [ "$(ATF_MAJOR).$(ATF_MINOR)" = "2.01" ]; then \
 		dd if=/dev/zero bs=1024 count=4096 | tr "\000" "\377" > $(OUTPUT_IMAGE); \
 		dd bs=1 seek=4194304 conv=notrunc if=$(OUTPUT_RAW_IMAGE) of=$(OUTPUT_IMAGE); \
+	else \
+		cp $(OUTPUT_RAW_IMAGE) $(OUTPUT_IMAGE); \
 	fi
 
 ## tianocore_capsule	: Tianocore Capsule image
