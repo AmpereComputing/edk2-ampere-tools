@@ -358,6 +358,11 @@ function configure_paths
         GLOBAL_PACKAGES_PATH="$GLOBAL_PACKAGES_PATH:$PLATFORMS_DIR"
     fi
 
+    # add edk2-platforms/Features/Intel to the PACKAGES_PATH
+    if [ -d "$PLATFORMS_DIR"/Features/Intel ]; then
+        GLOBAL_PACKAGES_PATH="$GLOBAL_PACKAGES_PATH:$PLATFORMS_DIR/Features/Intel"
+    fi
+
     # locate edk2-non-osi
     if [ -z "$NON_OSI_DIR" -a -d "$PWD"/edk2-non-osi ]; then
         NON_OSI_DIR="$PWD"/edk2-non-osi
