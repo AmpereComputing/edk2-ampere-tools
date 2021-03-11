@@ -78,9 +78,10 @@ OUTPUT_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(O
 OUTPUT_RAW_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).img.raw
 OUTPUT_FD_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).fd
 OUTPUT_FD_SIGNED_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).fd.signed
-OUTPUT_BST_BIN := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.bin
+OUTPUT_BOARD_SETTING_BIN := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.bin
 
-BOARD_SETTING ?= $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME)_board_setting.txt
+BOARD_SETTING_FILES := $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME)_board_setting.txt $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME_UFL)BoardSetting.cfg
+BOARD_SETTING ?= $(word 1,$(foreach iter,$(BOARD_SETTING_FILES), $(if $(wildcard $(iter)),$(iter),)))
 
 ATF_MAJOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c7 )
 ATF_MINOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c8-9 )
@@ -206,21 +207,19 @@ endif
 
 _check_board_setting:
 	@echo "Checking BOARD_SETTING...OK"
-	$(eval OUTPUT_BST_TXT := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.txt)
+	$(eval OUTPUT_BOARD_SETTING_TXT := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.txt)
 	@mkdir -p $(OUTPUT_BIN_DIR)
 
-ifeq ("$(suffix $(wildcard $(BOARD_SETTING)))",".bin")
-	@cp $(BOARD_SETTING) $(OUTPUT_BST_BIN)
-else
-
-ifeq ("$(suffix $(wildcard $(BOARD_SETTING)))",".txt")
-	@cp $(BOARD_SETTING) $(OUTPUT_BST_TXT)
-	@$(NVGENCMD) -f $(OUTPUT_BST_TXT) -o $(OUTPUT_BST_BIN)
-	@rm -r $(OUTPUT_BST_BIN).padded
-else
+ifeq ($(BOARD_SETTING),)
 	$(error "BOARD_SETTING invalid")
 endif
 
+ifeq ("$(suffix $(BOARD_SETTING))",".bin")
+	@cp $(BOARD_SETTING) $(OUTPUT_BOARD_SETTING_BIN)
+else
+	@cp $(BOARD_SETTING) $(OUTPUT_BOARD_SETTING_TXT)
+	@$(NVGENCMD) -f $(OUTPUT_BOARD_SETTING_TXT) -o $(OUTPUT_BOARD_SETTING_BIN)
+	@rm -r $(OUTPUT_BOARD_SETTING_BIN).padded
 endif
 
 _tianocore_prepare: _check_source _check_tools _check_compiler _check_iasl
@@ -266,7 +265,7 @@ tianocore_img: _check_atf_slim _check_board_setting tianocore_fd
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Image - ATF VERSION: $(ATF_MAJOR).$(ATF_MINOR).$(ATF_BUILD)..."
 	@dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $(OUTPUT_RAW_IMAGE)
 	@dd bs=1 seek=0 conv=notrunc if=$(ATF_SLIM) of=$(OUTPUT_RAW_IMAGE)
-	@dd bs=1 seek=2031616 conv=notrunc if=$(OUTPUT_BST_BIN) of=$(OUTPUT_RAW_IMAGE)
+	@dd bs=1 seek=2031616 conv=notrunc if=$(OUTPUT_BOARD_SETTING_BIN) of=$(OUTPUT_RAW_IMAGE)
 
 ifeq ($(ATF_TBB),1)
 	@$(MAKE) -C $(SCRIPTS_DIR) _tianocore_sign_fd

@@ -81,15 +81,17 @@ function build_tianocore_atf
         PLATFORM_PATH=${PLATFORMS_DIR}/"`dirname $PLATFORM_DSC`"
         if [ X"$BOARD_SETTING" == X"" ]; then
             BOARD_SETTING=$PLATFORM_PATH/${PLATFORM_LOWER}_board_setting.txt
+            if [ ! -f ${BOARD_SETTING} ]; then
+                BOARD_SETTING=$PLATFORM_PATH/${board}BoardSetting.cfg
+            fi
         fi
         cert_create -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key $PLATFORM_PATH/TestKeys/Dbb_AmpereTest.priv.pem --nt-fw-cert $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd.crt --nt-fw $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd
         fiptool create --nt-fw-cert $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd.crt --nt-fw $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fd $DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed
-        if [ "${BOARD_SETTING##*.}" = "txt" ]; then
-            cp -a $BOARD_SETTING $DEST_DIR/${PLATFORM_LOWER}_board_setting.txt
-            python $TOOLS_DIR/nvparam.py -f $DEST_DIR/${PLATFORM_LOWER}_board_setting.txt -o $DEST_DIR/${PLATFORM_LOWER}_board_setting.bin
-        fi
         if [ "${BOARD_SETTING##*.}" = "bin" ]; then
             cp -a $BOARD_SETTING $DEST_DIR/${PLATFORM_LOWER}_board_setting.bin
+        else
+            cp -a $BOARD_SETTING $DEST_DIR/${PLATFORM_LOWER}_board_setting.txt
+            python $TOOLS_DIR/nvparam.py -f $DEST_DIR/${PLATFORM_LOWER}_board_setting.txt -o $DEST_DIR/${PLATFORM_LOWER}_board_setting.bin
         fi
         ATF_MAJOR="`grep -aPo 'AMPC31.{0,14}' ${ATF_IMAGE} | tr -d '\0' | cut -c7`"
         ATF_MINOR="`grep -aPo 'AMPC31.{0,14}' ${ATF_IMAGE} | tr -d '\0' | cut -c8-9`"
@@ -561,6 +563,11 @@ while [ "$1" != "" ]; do
         --board-setting)
             shift
             BOARD_SETTING="`readlink -f $1`"
+            if [ ! -e "${BOARD_SETTING}" ]; then
+                echo "ERROR: BoardSettings file '$BOARD_SETTING' not found" >&2
+                exit 1
+            fi
+
             ;;
         --strict) # Exit if any platform/target fails to build
             STRICT=1
