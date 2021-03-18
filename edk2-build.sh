@@ -165,6 +165,12 @@ function do_build
     echo "Checking iasl version ${PLATFORM_IASL_VER}..."
     export IASL_VER=${PLATFORM_IASL_VER}
     check_iasl_tool ${TOOLS_DIR} ${IASL_VER}
+    echo ""
+    echo "********CAUTION*******"
+    echo "If you are compiling edk2-platforms version 1.04 and earlier,"
+    echo "please specify the iASL compiler version by adding the option --iasl-ver 20200110."
+    echo "**********************"
+    echo ""
     RET=$?
     if [ $RET -ne 0 ]; then
         exit 1

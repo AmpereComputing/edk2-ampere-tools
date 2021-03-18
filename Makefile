@@ -206,6 +206,12 @@ else
 	@cp ${SCRIPTS_DIR}/${IASL_NAME}/generate/unix/bin/iasl $(IASL_DIR)/$(IASL)
 	@rm -fr $(SCRIPTS_DIR)/$(IASL_NAME)
 endif
+	@echo ""
+	@echo "********CAUTION*******"
+	@echo "If you are compiling edk2-platforms version 1.04 and earlier,"
+	@echo "please specify the iASL compiler version by adding the option IASL_VER=20200110."
+	@echo "**********************"
+	@echo ""
 	$(eval export PATH := $(IASL_DIR):$(PATH))
 
 endif
