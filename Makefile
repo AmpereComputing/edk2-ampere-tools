@@ -32,7 +32,7 @@ ATF_TOOLS_DIR := $(SCRIPTS_DIR)/toolchain/atf-tools
 COMPILER_DIR := $(SCRIPTS_DIR)/toolchain/ampere
 IASL_DIR := $(SCRIPTS_DIR)/toolchain/iasl
 AARCH64_TOOLS_DIR := $(COMPILER_DIR)/bin
-export PATH := $(IASL_DIR):$(ATF_TOOLS_DIR):$(PATH)
+export PATH := $(ATF_TOOLS_DIR):$(PATH)
 
 # Compiler variables
 EDK2_GCC_TAG := GCC5
@@ -53,6 +53,9 @@ CERTTOOL := cert_create
 NVGENCMD := python $(SCRIPTS_DIR)/nvparam.py
 EXECUTABLES := openssl git cut sed awk wget tar bison gcc g++
 
+PARSE_PLATFORMS_TOOL := $(SCRIPTS_DIR)/parse-platforms.py
+PLATFORMS_CONFIG := $(SCRIPTS_DIR)/edk2-platforms.config
+
 # Build variant variables
 BUILD_VARIANT := $(if $(shell echo $(DEBUG) | grep -w 1),DEBUG,RELEASE)
 BUILD_VARIANT_LOWER := $(shell echo $(BUILD_VARIANT) | tr A-Z a-z)
@@ -64,6 +67,9 @@ GIT_VER := $(shell cd $(EDK2_PLATFORMS_SRC_DIR) 2>/dev/null && \
 # Input VER
 VER ?= $(shell echo $(GIT_VER) | cut -d \. -f 1,2)
 VER := $(if $(VER),$(VER),0.00)
+
+# iASL Compiler version
+IASL_VER=$(shell $(PARSE_PLATFORMS_TOOL) -c $(PLATFORMS_CONFIG) -p $(BOARD_NAME_UFL) get -o IASL_VER)
 
 # Input BUILD
 BUILD ?= $(shell echo $(GIT_VER) | cut -d \. -f 3)
@@ -105,6 +111,8 @@ Options:
 	                          - Default: 0
 	VER=<Major.Minor>       : Specify image version
 	                          - Default: 0.0
+	IASL_VER=<Version>      : Specify iASL compiler version
+	                          - Default: $(IASL_VER)
 Target:
 endef
 export HELP_MSG
@@ -179,10 +187,16 @@ endif
 
 _check_iasl:
 	@echo -n "Checking iasl..."
-	$(eval IASL_NAME := acpica-unix2-20200110)
+	$(eval IASL_NAME := acpica-unix2-$(IASL_VER))
 	$(eval IASL_URL := "https://acpica.org/sites/acpica/files/$(IASL_NAME).tar.gz")
-ifneq ($(or $(and $(shell which $(IASL) 2>/dev/null),$(shell $(IASL) -v | grep version | grep 20200110)), \
-		    $(wildcard $(IASL_DIR)/$(IASL))),)
+ifneq ($(shell $(IASL) -v 2>/dev/null | grep $(IASL_VER)),)
+	# iASL compiler is already available in the system.
+	@rm -rf $(IASL_DIR)
+	@echo "OK"
+else
+
+	# iASL compiler not found or its version is not compatible.
+ifneq ($(shell $(IASL_DIR)/$(IASL) -v 2>/dev/null | grep $(IASL_VER)),)
 	@echo "OK"
 else
 	@echo -e "Not Found\nDownloading and building iasl..."
@@ -191,6 +205,9 @@ else
 	@$(MAKE) -C $(SCRIPTS_DIR)/$(IASL_NAME) -j $(NUM_THREADS) HOST=_CYGWIN
 	@cp ${SCRIPTS_DIR}/${IASL_NAME}/generate/unix/bin/iasl $(IASL_DIR)/$(IASL)
 	@rm -fr $(SCRIPTS_DIR)/$(IASL_NAME)
+endif
+	$(eval export PATH := $(IASL_DIR):$(PATH))
+
 endif
 
 _check_atf_slim:

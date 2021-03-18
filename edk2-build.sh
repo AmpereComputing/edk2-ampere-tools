@@ -41,6 +41,7 @@ VER=
 BUILD=
 BUILD_DATE="`date +%Y%m%d`"
 DEST_DIR=
+IASL_VER=
 
 # Number of threads to use for build
 export NUM_THREADS=$((`getconf _NPROCESSORS_ONLN` + `getconf _NPROCESSORS_ONLN`))
@@ -58,6 +59,18 @@ function get_platform_version
     PLATFORM_VER="0.00.100"
     # default version 0.00.100
     echo $PLATFORM_VER
+}
+
+function get_iasl_version
+{
+    PLATFORM_IASL_VER=$IASL_VER
+    if [ -z "$PLATFORM_IASL_VER" ]; then
+        PLATFORM_IASL_VER="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o iasl_ver`"
+    fi
+    if [ -z "$PLATFORM_IASL_VER" ]; then
+        PLATFORM_IASL_VER="20200110"
+    fi
+    echo $PLATFORM_IASL_VER
 }
 
 function build_tianocore_atf
@@ -147,6 +160,14 @@ function do_build
         board=`echo $board | cut -d: -f1`
     else
         PLATFORM_ARCH="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o arch`"
+    fi
+    PLATFORM_IASL_VER=`get_iasl_version`
+    echo "Checking iasl version ${PLATFORM_IASL_VER}..."
+    export IASL_VER=${PLATFORM_IASL_VER}
+    check_iasl_tool ${TOOLS_DIR} ${IASL_VER}
+    RET=$?
+    if [ $RET -ne 0 ]; then
+        exit 1
     fi
     PLATFORM_NAME="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o longname` ($PLATFORM_ARCH)"
     if [ -z "$PLATFORM_ARCH" ]; then
@@ -453,12 +474,6 @@ function check_tools
     if [ "$PLATFORM_ARCH" != "$BUILD_ARCH" ]; then
         export GCC5_AARCH64_PREFIX="`${CROSS_COMPILE}gcc -dumpmachine`"
     fi
-    echo "Checking iasl..."
-    check_iasl_tool ${TOOLS_DIR}
-    RET=$?
-    if [ $RET -ne 0 ]; then
-        exit 1
-    fi
     echo "Checking atf-tools..."
     check_atf_tool ${TOOLS_DIR}
     RET=$?
@@ -583,6 +598,11 @@ while [ "$1" != "" ]; do
                 echo "ERROR: LinuxBoot file '$LINUXBOOT_BIN' not found" >&2
                 exit 1
             fi
+            ;;
+        --iasl-ver) # acpica version: 20200110, 20201217
+            shift
+            IASL_VER=$1
+            echo "Input iasl version ${IASL_VER}"
             ;;
         --ver) # MANOR_VER. MAJOR_VER: 1.01
             shift

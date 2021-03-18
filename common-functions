@@ -330,14 +330,14 @@ function check_atf_tool
 function check_iasl_tool
 {
     TOOLS_DIR="$1"
+    IASL_VER="$2"
     if which iasl >/dev/null 2>&1; then
-        IASL_VER="`iasl -v | grep version | cut -d ' ' -f 5`"
-        if [ X"$IASL_VER" = X"20200110" ]; then
-            echo "---> iasl version $IASL_VER"
+        CURRENT_IASL_VER="`iasl -v | grep version | cut -d ' ' -f 5`"
+        if [ X"${CURRENT_IASL_VER}" = X"${IASL_VER}" ]; then
+            echo "---> iasl version ${CURRENT_IASL_VER}"
             return 0
         fi
     fi
-    IASL_VER="20200110"
     IASL_NAME=acpica-unix2-${IASL_VER}
     IASL_URL=https://acpica.org/sites/acpica/files/${IASL_NAME}.tar.gz
     echo "Downloading ${IASL_URL}..."
@@ -358,9 +358,9 @@ function check_iasl_tool
     fi
     echo "ERROR: can't locate the iasl tool" >&2
     echo "       please download and install to edk2-ampere-tools/toolchain/iasl" >&2
-    echo "       $ wget https://acpica.org/sites/acpica/files/acpica-unix2-20200110.tar.gz" >&2
-    echo "       $ tar xzf acpica-unix2-20200110.tar.gz" >&2
-    echo "       $ make -C acpica-unix2-20200110 -j8" >&2
+    echo "       $ wget https://acpica.org/sites/acpica/files/acpica-unix2-${IASL_VER}.tar.gz" >&2
+    echo "       $ tar xzf acpica-unix2-${IASL_VER}.tar.gz" >&2
+    echo "       $ make -C acpica-unix2-${IASL_VER} -j8" >&2
     echo "       $ cp generate/unix/bin/iasl edk2-ampere-tools/toolchain/iasl/" >&2
     return 1
 }
