@@ -190,12 +190,12 @@ _check_iasl:
 	$(eval IASL_NAME := acpica-unix2-$(IASL_VER))
 	$(eval IASL_URL := "https://acpica.org/sites/acpica/files/$(IASL_NAME).tar.gz")
 ifneq ($(shell $(IASL) -v 2>/dev/null | grep $(IASL_VER)),)
-	# iASL compiler is already available in the system.
+# iASL compiler is already available in the system.
 	@rm -rf $(IASL_DIR)
 	@echo "OK"
 else
 
-	# iASL compiler not found or its version is not compatible.
+# iASL compiler not found or its version is not compatible.
 ifneq ($(shell $(IASL_DIR)/$(IASL) -v 2>/dev/null | grep $(IASL_VER)),)
 	@echo "OK"
 else
@@ -316,7 +316,7 @@ tianocore_capsule: tianocore_img
 	@openssl dgst -sha256 -sign $(DBU_KEY) -out $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE)
 	@cat $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE) > $(OUTPUT_RAW_IMAGE).signed
 	@cp -f $(OUTPUT_RAW_IMAGE).signed $(TIANOCORE_ATF_SIGNED_IMAGE)
-	# support 1.01 tag
+# support 1.01 tag
 	$(eval EDK2_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_atfedk2.img.signed)
 	@ln -sf $(TIANOCORE_ATF_SIGNED_IMAGE) $(EDK2_ATF_SIGNED_IMAGE)
 
