@@ -309,22 +309,14 @@ endif
 .PHONY: tianocore_capsule
 tianocore_capsule: tianocore_img
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Capsule..."
-	$(eval TIANOCORE_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/$(BOARD_NAME)_tianocore_atf.img.signed)
+	$(eval TIANOCORE_ATF_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_tianocore_atf.img)
 	$(eval OUTPUT_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
-	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
-	@echo "Sign Tianocore Image"
-	@openssl dgst -sha256 -sign $(DBU_KEY) -out $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE)
-	@cat $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE) > $(OUTPUT_RAW_IMAGE).signed
-	@cp -f $(OUTPUT_RAW_IMAGE).signed $(TIANOCORE_ATF_SIGNED_IMAGE)
-# support 1.01 tag
-	$(eval EDK2_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_atfedk2.img.signed)
-	@ln -sf $(TIANOCORE_ATF_SIGNED_IMAGE) $(EDK2_ATF_SIGNED_IMAGE)
+	@ln -sf $(OUTPUT_IMAGE) $(TIANOCORE_ATF_IMAGE)
 
 	@echo "Build Capsule Image"
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) \
-		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_SIGNED_IMAGE) \
+		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_IMAGE) \
 		-p Platform/Ampere/$(BOARD_NAME_UFL)Pkg/$(BOARD_NAME_UFL)Capsule.dsc
 	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
-	@rm -fr $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).signed $(OUTPUT_RAW_IMAGE)
 
 # end of makefile
