@@ -4,7 +4,7 @@
 # edk2-build.sh: evolution of uefi-build.sh for edk2-platforms
 #
 # Copyright (c) 2012-2019, Linaro Ltd. All rights reserved.
-# Copyright (c) 2020, Ampere Computing LLC. All rights reserved.
+# Copyright (c) 2020 - 2021, Ampere Computing LLC. All rights reserved.
 #
 # SPDX-License-Identifier: ISC
 #
@@ -133,14 +133,31 @@ function build_tianocore_atf
                 dd bs=1 seek=2031616 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=${TIANOCORE_ATF_SLIM}
                 dd bs=1024 seek=2048 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=${TIANOCORE_ATF_SLIM}
             fi
-            ln -sf ${TIANOCORE_ATF_SLIM} $WS_BOARD/${PLATFORM_LOWER}_tianocore_atf.img
+            # For the ATF firmware version < 1.06, the firmware image need to be signed with the DBU key.
+            if [ ${ATF_VER} -lt 106 ]; then
+                DBU_PRV_KEY="$PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem"
+                if [ ! -f ${DBU_PRV_KEY} ]; then
+                    echo "ERROR: DBU key '${DBU_PRV_KEY}' not found!"
+                    exit 1
+                fi
+                openssl dgst -sha256 -sign ${DBU_PRV_KEY} -out $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig ${TIANOCORE_ATF_SLIM}
+                cat $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig ${TIANOCORE_ATF_SLIM} > $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
+                ln -sf $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed $WS_BOARD/${PLATFORM_LOWER}_atfedk2.img.signed
+            else
+                ln -sf ${TIANOCORE_ATF_SLIM} $WS_BOARD/${PLATFORM_LOWER}_tianocore_atf.img
+            fi
             CAPSULE_DSC="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o capsule_dsc`"
-            build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
-                -D UEFI_ATF_IMAGE=${TIANOCORE_ATF_SLIM}
+            if [ ${ATF_VER} -lt 106 ]; then
+                build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
+                    -D UEFI_ATF_IMAGE=$WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
+            else
+                build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
+                    -D UEFI_ATF_IMAGE=${TIANOCORE_ATF_SLIM}
+            fi
             cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.cap
             rm -fr ${TIANOCORE_ATF_SLIM}
         fi
-        rm -fr $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed
+        rm -fr $DEST_DIR/*.img.signed $DEST_DIR/*.img.sig $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed
     fi
     echo "Results: `readlink -f $DEST_DIR`"
     if which tree >/dev/null 2>&1; then

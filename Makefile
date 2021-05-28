@@ -1,6 +1,6 @@
 # @file
 #
-# Copyright (c) 2020, Ampere Computing LLC. All rights reserved.<BR>
+# Copyright (c) 2020 - 2021, Ampere Computing LLC. All rights reserved.<BR>
 #
 # SPDX-License-Identifier: ISC
 #
@@ -92,6 +92,9 @@ BOARD_SETTING ?= $(word 1,$(foreach iter,$(BOARD_SETTING_FILES), $(if $(wildcard
 ATF_MAJOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c7 )
 ATF_MINOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c8-9 )
 ATF_BUILD = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) | tr -d '\0' | cut -c10-17 )
+
+FW_VER_LT_1_6 := $(shell [ $(ATF_MAJOR)$(ATF_MINOR) -lt 106 ] && echo true)
+FW_VER_NE_0_00 := $(shell [ $(ATF_MAJOR)$(ATF_MINOR) -ne 000 ] && echo true)
 
 # Targets
 define HELP_MSG
@@ -309,14 +312,26 @@ endif
 .PHONY: tianocore_capsule
 tianocore_capsule: tianocore_img
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Capsule..."
-	$(eval TIANOCORE_ATF_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_tianocore_atf.img)
 	$(eval OUTPUT_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
+ifeq ($(and $(FW_VER_LT_1_6),$(FW_VER_NE_0_00)),)
+	$(eval TIANOCORE_ATF_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_tianocore_atf.img)
 	@ln -sf $(OUTPUT_IMAGE) $(TIANOCORE_ATF_IMAGE)
+else
+	$(eval TIANOCORE_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/$(BOARD_NAME)_tianocore_atf.img.signed)
+	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
+	@echo "Sign Tianocore Image"
+	@openssl dgst -sha256 -sign $(DBU_KEY) -out $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE)
+	@cat $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE) > $(OUTPUT_RAW_IMAGE).signed
+	@cp -f $(OUTPUT_RAW_IMAGE).signed $(TIANOCORE_ATF_SIGNED_IMAGE)
+	$(eval TIANOCORE_ATF_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_atfedk2.img.signed)
+	@ln -sf $(TIANOCORE_ATF_SIGNED_IMAGE) $(TIANOCORE_ATF_IMAGE)
+endif
 
 	@echo "Build Capsule Image"
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) \
 		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_IMAGE) \
 		-p Platform/Ampere/$(BOARD_NAME_UFL)Pkg/$(BOARD_NAME_UFL)Capsule.dsc
 	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
+	@rm -fr $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).signed $(OUTPUT_RAW_IMAGE)
 
 # end of makefile
