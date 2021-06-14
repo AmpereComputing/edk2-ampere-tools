@@ -192,13 +192,6 @@ _check_iasl:
 	@echo -n "Checking iasl..."
 	$(eval IASL_NAME := acpica-unix2-$(IASL_VER))
 	$(eval IASL_URL := "https://acpica.org/sites/acpica/files/$(IASL_NAME).tar.gz")
-ifneq ($(shell $(IASL) -v 2>/dev/null | grep $(IASL_VER)),)
-# iASL compiler is already available in the system.
-	@rm -rf $(IASL_DIR)
-	@echo "OK"
-else
-
-# iASL compiler not found or its version is not compatible.
 ifneq ($(shell $(IASL_DIR)/$(IASL) -v 2>/dev/null | grep $(IASL_VER)),)
 	@echo "OK"
 else
@@ -216,8 +209,6 @@ endif
 	@echo "**********************"
 	@echo ""
 	$(eval export PATH := $(IASL_DIR):$(PATH))
-
-endif
 
 _check_atf_slim:
 	@echo "Checking ATF_SLIM...OK"
@@ -257,7 +248,7 @@ _tianocore_prepare: _check_source _check_tools _check_compiler _check_iasl
 
 _tianocore_sign_fd: _check_atf_tools
 	@echo "Creating certitficate for $(OUTPUT_FD_IMAGE)"
-	$(eval DBB_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
+	$(eval DBB_KEY := $(EDK2_PLATFORMS_PKG_DIR)/TestKeys/Dbb_AmpereTest.priv.pem)
 	@$(CERTTOOL) -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key $(DBB_KEY) --nt-fw-cert $(OUTPUT_FD_IMAGE).crt --nt-fw $(OUTPUT_FD_IMAGE)
 	@$(FIPTOOL) create --nt-fw-cert $(OUTPUT_FD_IMAGE).crt --nt-fw $(OUTPUT_FD_IMAGE) $(OUTPUT_FD_SIGNED_IMAGE)
 	@rm -fr $(OUTPUT_FD_IMAGE).crt
@@ -318,7 +309,7 @@ ifeq ($(and $(FW_VER_LT_1_6),$(FW_VER_NE_0_00)),)
 	@ln -sf $(OUTPUT_IMAGE) $(TIANOCORE_ATF_IMAGE)
 else
 	$(eval TIANOCORE_ATF_SIGNED_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/$(BOARD_NAME)_tianocore_atf.img.signed)
-	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
+	$(eval DBU_KEY := $(EDK2_PLATFORMS_PKG_DIR)/TestKeys/Dbu_AmpereTest.priv.pem)
 	@echo "Sign Tianocore Image"
 	@openssl dgst -sha256 -sign $(DBU_KEY) -out $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE)
 	@cat $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE) > $(OUTPUT_RAW_IMAGE).signed
@@ -331,7 +322,7 @@ endif
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) \
 		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_IMAGE) \
 		-p Platform/Ampere/$(BOARD_NAME_UFL)Pkg/$(BOARD_NAME_UFL)Capsule.dsc
-	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
+	@cp -f $(EDK2_FV_DIR)/$(BOARD_NAME_UPPER)FIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
 	@rm -fr $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).signed $(OUTPUT_RAW_IMAGE)
 
 # end of makefile
