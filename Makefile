@@ -99,6 +99,7 @@ Ampere EDK2 Tools
 ============================================================
 Usage: make <Targets> [Options]
 Options:
+	SCP_SLIM=<Path>         : Path to scp.slim image
 	ATF_SLIM=<Path>         : Path to atf.slim image
 	LINUXBOOT_BIN=<Path>    : Path to linuxboot binary (flashkernel)
 	BOARD_SETTING=<Path>    : Path to board_setting.[txt/bin]
@@ -293,10 +294,23 @@ tianocore_img: _check_atf_slim _check_board_setting tianocore_fd
 .PHONY: tianocore_capsule
 tianocore_capsule: tianocore_img
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Capsule..."
-	$(eval OUTPUT_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
+	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
 # *atfedk2.img.signed was chosen to be backward compatible with release 1.01
 	$(eval TIANOCORE_ATF_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_atfedk2.img.signed)
-	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
+	$(eval OUTPUT_UEFI_ATF_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
+	$(eval SCP_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_scp.slim)
+	$(eval OUTPUT_SCP_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_scp$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
+
+	@if [ -f "$(SCP_SLIM)" ]; then \
+		ln -sf $(realpath $(SCP_SLIM)) $(SCP_IMAGE); \
+	else \
+		echo "********WARNING*******"; \
+		echo " SCP firmware image is not valid to build capsule image."; \
+		echo " It should be provided via the make build option, SCP_SLIM=/path/to/the/SCP/firmware/image."; \
+		echo " Creating a fake image to pass the build..."; \
+		echo "**********************"; \
+		touch $(SCP_IMAGE); \
+	fi
 
 	@if [ $(MAJOR_VER)$(MINOR_VER) -le 105 ]; then \
 		echo "Sign Tianocore Image"; \
@@ -304,13 +318,15 @@ tianocore_capsule: tianocore_img
 		cat $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE) > $(OUTPUT_RAW_IMAGE).signed; \
 		ln -sf $(OUTPUT_RAW_IMAGE).signed $(TIANOCORE_ATF_IMAGE); \
 	else \
-		ln -sf $(OUTPUT_IMAGE) $(TIANOCORE_ATF_IMAGE)
+		ln -sf $(OUTPUT_IMAGE) $(TIANOCORE_ATF_IMAGE); \
 	fi
 
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) \
 		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_IMAGE) \
+		-D SCP_IMAGE=$(SCP_IMAGE) \
 		-p Platform/Ampere/$(BOARD_NAME_UFL)Pkg/$(BOARD_NAME_UFL)Capsule.dsc
-	@cp -f $(EDK2_FV_DIR)/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_CAPSULE)
+	@cp -f $(EDK2_FV_DIR)/JADEUEFIATFFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_UEFI_ATF_CAPSULE)
+	@cp -f $(EDK2_FV_DIR)/JADESCPFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_SCP_CAPSULE)
 	@rm -f $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).signed $(OUTPUT_RAW_IMAGE)
 
 # end of makefile

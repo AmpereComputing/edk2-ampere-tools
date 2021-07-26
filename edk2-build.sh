@@ -23,6 +23,7 @@ ARCH=
 VERBOSE=0                  # Override with -v
 STRICT=0                   # Override with --strict
 ATF_DIR=
+SCP_IMAGE=
 ATF_IMAGE=
 LINUXBOOT=0
 LINUXBOOT_FMT=
@@ -146,15 +147,26 @@ function build_tianocore_atf
             else
                 ln -sf ${TIANOCORE_ATF_SLIM} $WS_BOARD/${PLATFORM_LOWER}_tianocore_atf.img
             fi
+            if [ -z "${SCP_IMAGE}" ]; then
+                # Make capsule build for SCP firmware flexible so the build will continue and leave a warning to users.
+                echo "********WARNING*******"
+                echo " SCP firmware image is not valid to build capsule image."
+                echo " It should be provided via the make build option, --scp-image=/path/to/the/SCP/firmware/image."
+                echo " Creating a fake image to pass the build..."
+                echo "**********************"
+                touch $WS_BOARD/${PLATFORM_LOWER}_scp.slim
+                SCP_IMAGE="$WS_BOARD/${PLATFORM_LOWER}_scp.slim"
+            fi
             CAPSULE_DSC="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o capsule_dsc`"
             if [ ${ATF_VER} -lt 106 ]; then
                 build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
                     -D UEFI_ATF_IMAGE=$WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
             else
                 build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
-                    -D UEFI_ATF_IMAGE=${TIANOCORE_ATF_SLIM}
+                    -D UEFI_ATF_IMAGE=${TIANOCORE_ATF_SLIM} -D SCP_IMAGE=${SCP_IMAGE}
             fi
-            cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADEFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.cap
+            cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADEUEFIATFFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.cap
+            cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADESCPFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_scp${BUILD_TYPE}_${VER}.${BUILD}.cap
             rm -fr ${TIANOCORE_ATF_SLIM}
         fi
         rm -fr $DEST_DIR/*.img.signed $DEST_DIR/*.img.sig $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed
@@ -505,7 +517,7 @@ function check_tools
 function usage
 {
     echo "usage:"
-    echo -n "edk2-build.sh [-b DEBUG | RELEASE] [--atf-image <Ampere_ATF_Image>] [--board-setting <board_setting.txt/.bin>] [ all "
+    echo -n "edk2-build.sh [-b DEBUG | RELEASE] [--scp-image <Ampere_SCP_Image>] [--atf-image <Ampere_ATF_Image>] [--board-setting <board_setting.txt/.bin>] [ all "
     for board in "${boards[@]}" ; do
         echo -n "| $board "
     done
@@ -635,6 +647,14 @@ while [ "$1" != "" ]; do
         --dest-dir)
             shift
             DEST_DIR="`readlink -f $1`"
+            ;;
+        --scp-image) # Ampere SCP image
+            shift
+            SCP_IMAGE="`readlink -f $1`"
+            if [ ! -e "${SCP_IMAGE}" ]; then
+                echo "ERROR: SCP SLIM file '$SCP_IMAGE' not found" >&2
+                exit 1
+            fi
             ;;
         --atf-image) # ampere atf image
             shift
