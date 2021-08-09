@@ -124,6 +124,21 @@ Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 
 ### Build Tianocore Capsule
 
+For current Ampere ATF
+```
+$ build -a AARCH64 -t GCC5 -b RELEASE               \
+    -p Platform/Ampere/JadePkg/JadeCapsule.dsc      \
+    -D UEFI_ATF_IMAGE=<ampere_atf_image_filepath>   \
+    -D SCP_IMAGE=<ampere_scp_slim_image_filepath>
+$ cp Build/Jade/RELEASE_GCC5/FV/JADEUEFIATFFIRMWAREUPDATECAPSULEFMPPKCS7.Cap BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap
+$ cp Build/Jade/RELEASE_GCC5/FV/JADESCPFIRMWAREUPDATECAPSULEFMPPKCS7.Cap BUILDS/jade_tianocore_atf/jade_scp.cap
+
+Result:
+    BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap
+    BUILDS/jade_tianocore_atf/jade_scp.cap
+```
+
+For Ampere ATF version 1.05 and earlier
 ```
 $ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
 $ dd bs=1 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
