@@ -8,7 +8,7 @@ an extension of what is already provided in the README located at
 It is assumed that your build environment has been set up appropriately
 based on `edk2-platforms/Platform/Ampere/README.md`.
 
-Througout this document, Ampere's Mt. Jade platform is used to illustrate
+Throughout this document, Ampere's Mt. Jade platform is used to illustrate
 various steps to arrive at a final Tianocore UEFI image that can be
 flashed to the platform.
 
@@ -24,7 +24,6 @@ Building UEFI image without LinuxBoot
 
 ```
 $ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -D SECURE_BOOT_ENABLE -p Platform/Ampere/JadePkg/Jade.dsc
-
 ```
 
 Building UEFI image with LinuxBoot
@@ -58,7 +57,7 @@ $ mkdir -p BUILDS/jade_tianocore_atf
 
 ## Signing the image
 
-You need to download and install `cert_create` and `fiptool`` from
+You need to download and install `cert_create` and `fiptool` from
 Arm Trusted Firmware.
 
 ```
@@ -160,4 +159,3 @@ pass   1
 fail   0
 ```
 An equivalent **Makefile** is also provided for those who wish to use it instead. Run `make -f edk2-ampere-tools/Makefile` for options.
-
