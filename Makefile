@@ -10,6 +10,7 @@ SHELL := /bin/bash
 
 # Default Input variables
 ATF_TBB ?= 1
+BUILD_LINUXBOOT ?= 0
 
 BOARD_NAME ?= jade
 BOARD_NAME_UPPER := $(shell echo $(BOARD_NAME) | tr a-z A-Z)
