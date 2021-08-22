@@ -16,6 +16,10 @@ export TOOLS_DIR
 
 PLATFORM_LOWER="jade"
 
+if uname -m | grep -q "x86_64"; then
+    CROSS_COMPILE=aarch64-linux-gnu-
+fi
+
 check_golang
 export GOPATH=${TOOLS_DIR}/toolchain/gosource
 mkdir -p ${GOPATH}
