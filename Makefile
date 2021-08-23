@@ -158,7 +158,7 @@ _check_compiler:
 	$(eval COMPILER_NAME := ampere-8.3.0-20191025-dynamic-nosysroot-crosstools.tar.xz)
 	$(eval COMPILER_URL := https://cdn.amperecomputing.com/tools/compilers/cross/8.3.0/$(COMPILER_NAME))
 
-	@if [[ $(COMPILER) != $(AARCH64_TOOLS_DIR)*  || -f $(AARCH64_TOOLS_DIR)/$(AMPERE_COMPILER_PREFIX)gcc ]]; then \
+	@if [[ "$(COMPILER)" != $(AARCH64_TOOLS_DIR)*  || -f $(AARCH64_TOOLS_DIR)/$(AMPERE_COMPILER_PREFIX)gcc ]]; then \
 		echo $$($(COMPILER)gcc -dumpmachine) $$($(COMPILER)gcc -dumpversion); \
 	else \
 		echo -e "Not Found\nDownloading and setting Ampere compiler..."; \
@@ -225,7 +225,7 @@ _check_board_setting:
 	$(eval OUTPUT_BOARD_SETTING_TXT := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.txt)
 	@mkdir -p $(OUTPUT_BIN_DIR)
 
-	if [ $(BOARD_SETTING) = *.bin ]; then \
+	@if [ "$(BOARD_SETTING)" = *.bin ]; then \
 		cp $(BOARD_SETTING) $(OUTPUT_BOARD_SETTING_BIN); \
 	else \
 		cp $(BOARD_SETTING) $(OUTPUT_BOARD_SETTING_TXT); \
