@@ -225,7 +225,7 @@ _check_board_setting:
 	$(eval OUTPUT_BOARD_SETTING_TXT := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.txt)
 	@mkdir -p $(OUTPUT_BIN_DIR)
 
-	@if [ "$(BOARD_SETTING)" = *.bin ]; then \
+	@if [[ "$(BOARD_SETTING)" = *.bin ]]; then \
 		cp $(BOARD_SETTING) $(OUTPUT_BOARD_SETTING_BIN); \
 	else \
 		cp $(BOARD_SETTING) $(OUTPUT_BOARD_SETTING_TXT); \
