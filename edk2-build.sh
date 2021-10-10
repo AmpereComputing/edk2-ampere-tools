@@ -167,7 +167,6 @@ function build_tianocore_atf
             fi
             cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADEUEFIATFFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.cap
             cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADESCPFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_scp${BUILD_TYPE}_${VER}.${BUILD}.cap
-            rm -fr ${TIANOCORE_ATF_SLIM}
         fi
         rm -fr $DEST_DIR/*.img.signed $DEST_DIR/*.img.sig $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed
     fi
