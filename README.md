@@ -87,17 +87,8 @@ $ python nvparam.py -f Platform/Ampere/JadePkg/jade_board_setting.txt -o BUILDS/
 
 ### Build integrated UEFI + Board Setting + ATF image
 
-For Ampere ATF 1.03 and later version
-```
-$ dd bs=1024 count=6144 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
-$ dd bs=1 seek=4194304 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
-$ dd bs=1 seek=6225920 conv=notrunc if=BUILDS/jade_tianocore_atf/jade_board_setting.bin of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
-$ dd bs=1024 seek=6144 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+Generating the final image with the following commands:
 
-Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
-```
-
-For Ampere ATF 1.02 version
 ```
 $ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 $ dd bs=1 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
@@ -106,6 +97,8 @@ $ dd bs=1024 seek=2048 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of
 
 Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 ```
+
+Note that the `jade_tianocore_atf.img` image is flashed at the beginning of the ATF SLIM region according to the SPI-NOR Flash Layout.
 
 ### Build Tianocore Capsule
 

@@ -284,6 +284,8 @@ tianocore_img: _check_atf_slim _check_board_setting tianocore_fd
 		dd bs=1024 seek=2048 if=$(OUTPUT_FD_IMAGE) of=$(OUTPUT_RAW_IMAGE); \
 	fi
 
+# For Ampere ATF version 1.03 and 2.01, the following supports adding 4MB padding to the final image for
+# compatibility with the support of firmware update utility.
 	@if [ $(ATF_MAJOR)$(ATF_MINOR) -eq 103 ] || [ $(ATF_MAJOR)$(ATF_MINOR) -eq 201 ]; then \
 		dd if=/dev/zero bs=1024 count=4096 | tr "\000" "\377" > $(OUTPUT_IMAGE); \
 		dd bs=1 seek=4194304 conv=notrunc if=$(OUTPUT_RAW_IMAGE) of=$(OUTPUT_IMAGE); \
