@@ -20,28 +20,13 @@ The process of creating a flashable image involves the following steps:
 
 ## Building the UEFI image
 
-Building UEFI image without LinuxBoot
+Building EDK2 FD with the following command:
 
 ```
 $ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -D SECURE_BOOT_ENABLE -p Platform/Ampere/JadePkg/Jade.dsc
 ```
 
-Building UEFI image with LinuxBoot
-
-Step 1: Building LinuxBoot binary
-
-```
-$ git clone --branch master https://github.com/linuxboot/mainboards.git
-$ make -C main/ampere/jade fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
-$ cp mainboards/ampere/jade/flashkernel edk2-platforms/Platform/Ampere/LinuxBootPkg/AArch64/flashkernel
-```
-
-Step 2: UEFI image with LinuxBoot
-
-```
-$ cd edk2-platforms && build -a AARCH64 -t GCC5 -b RELEASE -p Platform/Ampere/JadePkg/JadeLinuxBoot.dsc
-
-```
+**Notes**: Please refer to [LinuxBoot.md](LinuxBoot.md) for building EDK2+LinuxBoot FD.
 
 The resulting image will be at
 
