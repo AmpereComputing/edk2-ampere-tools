@@ -14,7 +14,7 @@ unset MAKEFLAGS  # BaseTools not safe to build parallel, prevent env overrides
 TOOLS_DIR="`dirname $0`"
 TOOLS_DIR="`readlink -f \"$TOOLS_DIR\"`"
 export TOOLS_DIR
-export PATH=$TOOLS_DIR/toolchain/iasl:$TOOLS_DIR/toolchain/atf-tools:$TOOLS_DIR/toolchain/ampere/bin:$PATH
+export PATH=$TOOLS_DIR/toolchain/iasl:$TOOLS_DIR/toolchain/atf-tools:$PATH
 export AMPERE_CROSS_COMPILE=aarch64-ampere-linux-gnu-
 
 . "$TOOLS_DIR"/common-functions
@@ -486,23 +486,23 @@ function check_tools
         echo "No Ampere Platforms, skip check tools."
         return 0
     fi
-    echo "Checking Ampere Toolchain..."
+    echo "Checking AARCH64 Toolchain..."
     get_build_arch
     echo "Target: $PLATFORM_ARCH"
     echo "Build: $BUILD_ARCH"
     if [ "$PLATFORM_ARCH" = "$BUILD_ARCH" ]; then
         CROSS_COMPILE=
     elif [ -z "$CROSS_COMPILE" ]; then
-        CROSS_COMPILE=${AMPERE_CROSS_COMPILE}
-    fi
-    if [ "$CROSS_COMPILE" = "$AMPERE_CROSS_COMPILE" ]; then
-        check_ampere_toolchain ${TOOLS_DIR} "$CROSS_COMPILE"gcc
-    fi
-    RET=$?
-    if [ $RET -ne 0 ]; then
+        echo "Please input CROSS_COMPILE variable"
         exit 1
     fi
+
     if [ "$PLATFORM_ARCH" != "$BUILD_ARCH" ]; then
+        ${CROSS_COMPILE}gcc -dumpmachine | grep aarch64
+        if [ $? -ne 0 ]; then
+            echo "CROSS_COMPILE is invalid"
+            exit 1
+        fi
         export GCC5_AARCH64_PREFIX="`${CROSS_COMPILE}gcc -dumpmachine`"
     fi
     echo "Checking atf-tools..."

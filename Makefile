@@ -29,19 +29,10 @@ EDK2_PLATFORMS_PKG_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME
 REQUIRE_EDK2_SRC := $(EDK2_SRC_DIR) $(EDK2_PLATFORMS_SRC_DIR)$(if $(wildcard $(EDK2_NON_OSI_SRC_DIR)), $(EDK2_NON_OSI_SRC_DIR),) $(EDK2_FEATURES_INTEL_DIR)
 
 ATF_TOOLS_DIR := $(SCRIPTS_DIR)/toolchain/atf-tools
-COMPILER_DIR := $(SCRIPTS_DIR)/toolchain/ampere
 IASL_DIR := $(SCRIPTS_DIR)/toolchain/iasl
-AARCH64_TOOLS_DIR := $(COMPILER_DIR)/bin
 
 # Compiler variables
 EDK2_GCC_TAG := GCC5
-AMPERE_COMPILER_PREFIX := aarch64-ampere-linux-gnu-
-ifneq ($(or $(shell $(CROSS_COMPILE)gcc -dumpmachine 2>/dev/null | grep -v ampere | grep aarch64), \
-           $(shell $(CROSS_COMPILE)gcc --version 2>/dev/null | grep Ampere | grep dynamic-nosysroot)),)
-	COMPILER := $(CROSS_COMPILE)
-else
-	COMPILER := $(AARCH64_TOOLS_DIR)/$(AMPERE_COMPILER_PREFIX)
-endif
 
 NUM_THREADS := $(shell echo $$(( $(shell getconf _NPROCESSORS_ONLN) + $(shell getconf _NPROCESSORS_ONLN))))
 
@@ -154,17 +145,13 @@ _check_tools:
 		$(if $(shell which $(iter) 2>/dev/null),,$(error "No $(iter) in PATH")))
 
 _check_compiler:
-	@echo -n "Checking compiler..."
-	$(eval COMPILER_NAME := ampere-8.3.0-20191025-dynamic-nosysroot-crosstools.tar.xz)
-	$(eval COMPILER_URL := https://cdn.amperecomputing.com/tools/compilers/cross/8.3.0/$(COMPILER_NAME))
+	@echo "Checking compiler...OK"
 
-	@if [[ "$(COMPILER)" != $(AARCH64_TOOLS_DIR)*  || -f $(AARCH64_TOOLS_DIR)/$(AMPERE_COMPILER_PREFIX)gcc ]]; then \
-		echo $$($(COMPILER)gcc -dumpmachine) $$($(COMPILER)gcc -dumpversion); \
-	else \
-		echo -e "Not Found\nDownloading and setting Ampere compiler..."; \
-		rm -rf $(COMPILER_DIR) && mkdir -p $(COMPILER_DIR); \
-		wget -O - -q $(COMPILER_URL) | tar xJf - -C $(COMPILER_DIR) --strip-components=1 --checkpoint=.100; \
-	fi
+ifeq ("$(shell uname -m)", "x86_64")
+	$(if $(shell $(CROSS_COMPILE)gcc -dumpmachine | grep aarch64),,$(error "CROSS_COMPILE is invalid"))
+endif
+
+	@echo "---> $$($(CROSS_COMPILE)gcc -dumpmachine) $$($(CROSS_COMPILE)gcc -dumpversion)";
 
 _check_atf_tools:
 	@echo -n "Checking ATF Tools..."
@@ -237,7 +224,7 @@ _tianocore_prepare: _check_source _check_tools _check_compiler _check_iasl
 	$(if $(wildcard $(EDK2_SRC_DIR)/BaseTools/Source/C/bin),,$(MAKE) -C $(EDK2_SRC_DIR)/BaseTools -j $(NUM_THREADS))
 	$(eval export WORKSPACE := $(CUR_DIR))
 	$(eval export PACKAGES_PATH := $(shell echo $(REQUIRE_EDK2_SRC) | sed 's/ /:/g'))
-	$(eval export $(EDK2_GCC_TAG)_AARCH64_PREFIX := $(COMPILER))
+	$(eval export $(EDK2_GCC_TAG)_AARCH64_PREFIX := $(CROSS_COMPILE))
 	$(eval EDK2_FV_DIR := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BUILD_VARIANT)_$(EDK2_GCC_TAG)/FV)
 
 _tianocore_sign_fd: _check_atf_tools

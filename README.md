@@ -133,6 +133,7 @@ Result: BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap
 # Using helper-scripts and Makefile
 
 Provided in this repository are the helper script **edk2-build.sh** modified from Linaro's uefi-tools at https://git.linaro.org/uefi/uefi-tools.git with added support for building Ampere's platform and final integrated Tianocore image.
+
 ```
 $ cd edk2-ampere-tools/
 $ ./edk2-build.sh -b RELEASE Jade --atf-image <full-path-to-ATF-image.slim>
@@ -152,3 +153,7 @@ pass   1
 fail   0
 ```
 An equivalent **Makefile** is also provided for those who wish to use it instead. Run `make -f edk2-ampere-tools/Makefile` for options.
+
+**Note**
+- For cross-compilation, use CROSS_COMPILE environment variable to specify the cross-compiler.
+- For native compilation, make sure that the location of the compiler invocations has been added to the PATH environment variable.
