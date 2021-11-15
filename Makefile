@@ -50,7 +50,7 @@ IASL := iasl
 FIPTOOL := fiptool
 CERTTOOL := cert_create
 NVGENCMD := python $(SCRIPTS_DIR)/nvparam.py
-EXECUTABLES := openssl git cut sed awk wget tar bison gcc g++
+EXECUTABLES := openssl git cut sed awk wget tar flex bison gcc g++ python3
 
 PARSE_PLATFORMS_TOOL := $(SCRIPTS_DIR)/parse-platforms.py
 PLATFORMS_CONFIG := $(SCRIPTS_DIR)/edk2-platforms.config
