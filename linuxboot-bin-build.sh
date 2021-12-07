@@ -8,6 +8,7 @@
 #
 # LinuxBoot Binary Build
 #
+GOLANG_VER=1.16.11
 TOOLS_DIR="`dirname $0`"
 TOOLS_DIR="`readlink -f \"$TOOLS_DIR\"`"
 export TOOLS_DIR
@@ -20,8 +21,10 @@ if uname -m | grep -q "x86_64"; then
     CROSS_COMPILE=${CROSS_COMPILE:-aarch64-linux-gnu-}
 fi
 
-check_golang
+check_golang ${GOLANG_VER}
 export GOPATH=${TOOLS_DIR}/toolchain/gosource
+export GOFLAGS=-modcacherw
+export GO111MODULE=off
 mkdir -p ${GOPATH}
 export PATH=${GOPATH}/bin:${TOOLS_DIR}/toolchain/go/bin:$PATH
 

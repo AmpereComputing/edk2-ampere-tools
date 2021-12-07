@@ -249,7 +249,7 @@ function get_atf_tools
 
 function check_golang
 {
-    GOLANG_VER=1.15.6
+    GOLANG_VER=$1
     GOLANG_ARCH=amd64
     GOLANG_INSTALL_DIR=${TOOLS_DIR}/toolchain
     echo "Checking golang ver ${GOLANG_VER}... build arch: ${BUILD_ARCH}"
