@@ -8,7 +8,7 @@
 #
 # LinuxBoot Binary Build
 #
-GOLANG_VER=1.16.11
+GOLANG_VER=1.17.4
 TOOLS_DIR="`dirname $0`"
 TOOLS_DIR="`readlink -f \"$TOOLS_DIR\"`"
 export TOOLS_DIR
