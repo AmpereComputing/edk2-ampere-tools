@@ -10,11 +10,11 @@
 #
 
 unset MAKEFLAGS  # BaseTools not safe to build parallel, prevent env overrides
-
+EFITOOLS_VER=1.8.1
 TOOLS_DIR="`dirname $0`"
 TOOLS_DIR="`readlink -f \"$TOOLS_DIR\"`"
 export TOOLS_DIR
-export PATH=$TOOLS_DIR/toolchain/iasl:$TOOLS_DIR/toolchain/atf-tools:$PATH
+export PATH=$TOOLS_DIR/toolchain/iasl:$TOOLS_DIR/toolchain/atf-tools:$TOOLS_DIR/toolchain/efitools:$PATH
 export AMPERE_CROSS_COMPILE=aarch64-ampere-linux-gnu-
 
 . "$TOOLS_DIR"/common-functions
@@ -74,6 +74,27 @@ function get_iasl_version
     echo $PLATFORM_IASL_VER
 }
 
+function build_dbu_auth_key
+{
+    DBUKEY="$PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem"
+    DBUCER="$PLATFORM_PATH/TestKeys/Dbu_AmpereTest.cer.pem"
+    DBUDIR=${DEST_DIR}/dbukeys
+    if [ ${ATF_VER} -gt 107 ]; then
+        mkdir -p ${DBUDIR}
+        FWUGUID=`python3 -c 'import uuid; print(str(uuid.uuid1()))'`
+        echo "FWU_GUID=${FWUGUID}"
+        echo ${FWUGUID} > ${DBUDIR}/dbu_guid.txt
+        cert-to-efi-sig-list -g ${FWUGUID} ${DBUCER} ${DBUDIR}/dbu.esl
+        sign-efi-sig-list -g ${FWUGUID} -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+                        -k ${DBUKEY} -c ${DBUCER} dbu ${DBUDIR}/dbu.esl ${DBUDIR}/dbukey.auth
+        sign-efi-sig-list -g ${FWUGUID} -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+                        -k ${DBUKEY} -c ${DBUCER} dbu /dev/null ${DBUDIR}/del_dbukey.auth
+        cp -f ${DBUDIR}/dbukey.auth ${DEST_DIR}/
+        cp -f ${DBUDIR}/del_dbukey.auth ${DEST_DIR}/
+        rm -r ${DBUDIR}
+    fi
+}
+
 function build_tianocore_atf
 {
     WS_BOARD="$WORKSPACE/Build/${board}"
@@ -122,6 +143,16 @@ function build_tianocore_atf
         else
             dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}
             dd bs=1 conv=notrunc if=${ATF_IMAGE} of=${TIANOCORE_ATF_SLIM}
+            if [ ${ATF_VER} -gt 107 ]; then
+                DBU_PRV_KEY="$PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem"
+                if [ ! -f ${DBU_PRV_KEY} ]; then
+                    echo "ERROR: DBU key '${DBU_PRV_KEY}' not found!"
+                    exit 1
+                fi
+                cert_create -n --ntfw-nvctr 0 --key-alg rsa --hash-alg sha384 --nt-fw-key ${DBU_PRV_KEY} --nt-fw-cert ${TIANOCORE_ATF_SLIM}.crt --nt-fw ${ATF_IMAGE}
+                dd bs=1 seek=1572864 conv=notrunc if=${TIANOCORE_ATF_SLIM}.crt of=${TIANOCORE_ATF_SLIM}
+                rm -f ${TIANOCORE_ATF_SLIM}.crt
+            fi
             dd bs=1 seek=2031616 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=${TIANOCORE_ATF_SLIM}
             dd bs=1024 seek=2048 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=${TIANOCORE_ATF_SLIM}
         fi
@@ -144,9 +175,23 @@ function build_tianocore_atf
                 openssl dgst -sha256 -sign ${DBU_PRV_KEY} -out $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig ${TIANOCORE_ATF_SLIM}
                 cat $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig ${TIANOCORE_ATF_SLIM} > $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
                 ln -sf $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed $WS_BOARD/${PLATFORM_LOWER}_atfedk2.img.signed
+            elif [ ${ATF_VER} -lt 108 ]; then
+                ln -sf ${TIANOCORE_ATF_SLIM}.signed $WS_BOARD/${PLATFORM_LOWER}_tianocore_atf.img
             else
-                ln -sf ${TIANOCORE_ATF_SLIM} $WS_BOARD/${PLATFORM_LOWER}_tianocore_atf.img
+                DBU_PRV_KEY="$PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem"
+                if [ ! -f ${DBU_PRV_KEY} ]; then
+                    echo "ERROR: DBU key '${DBU_PRV_KEY}' not found!"
+                    exit 1
+                fi
+                echo "Append to dummy byte to UEFI image"
+                dd bs=1 count=13630976 if=/dev/zero | tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}.append
+                dd bs=1 seek=0 conv=notrunc if=${TIANOCORE_ATF_SLIM} of=${TIANOCORE_ATF_SLIM}.append
+                openssl dgst -sha384 -sign ${DBU_PRV_KEY} \
+                    -out $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig \
+                    ${TIANOCORE_ATF_SLIM}.append
+                cat $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig ${TIANOCORE_ATF_SLIM}.append > ${TIANOCORE_ATF_SLIM}.signed
             fi
+
             if [ -z "${SCP_IMAGE}" ]; then
                 # Make capsule build for SCP firmware flexible so the build will continue and leave a warning to users.
                 echo "********WARNING*******"
@@ -155,21 +200,49 @@ function build_tianocore_atf
                 echo " Creating a fake image to pass the build..."
                 echo "**********************"
                 touch $WS_BOARD/${PLATFORM_LOWER}_scp.slim
-                SCP_IMAGE="$WS_BOARD/${PLATFORM_LOWER}_scp.slim"
+                SCP_SLIM="$WS_BOARD/${PLATFORM_LOWER}_scp.slim"
+            else
+                if [ ${ATF_VER} -gt 107 ]; then
+                    DBU_PRV_KEY="$PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem"
+                    if [ ! -f ${DBU_PRV_KEY} ]; then
+                        echo "ERROR: DBU key '${DBU_PRV_KEY}' not found!"
+                        exit 1
+                    fi
+                    echo "Append dummy data to origin SCP image"
+                    SCP_SLIM="$WS_BOARD/${PLATFORM_LOWER}_scp.slim"
+                    dd bs=1 count=261632 if=/dev/zero | tr "\000" "\377" > ${SCP_SLIM}.append
+                    dd bs=1 seek=0 conv=notrunc if=${SCP_IMAGE} of=${SCP_SLIM}.append
+                    openssl dgst -sha384 -sign ${DBU_PRV_KEY} -out ${SCP_SLIM}.sig ${SCP_SLIM}.append
+                    cat ${SCP_SLIM}.sig ${SCP_SLIM}.append > ${SCP_SLIM}.signed
+                    cp -r ${SCP_SLIM}.signed ${SCP_SLIM}
+                else
+                    SCP_SLIM="${SCP_IMAGE}"
+                fi
             fi
+
             CAPSULE_DSC="`$TOOLS_DIR/parse-platforms.py $PLATFORM_CONFIG -p $board get -o capsule_dsc`"
             if [ ${ATF_VER} -lt 106 ]; then
                 build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
                     -D UEFI_ATF_IMAGE=$WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/${PLATFORM_LOWER}_tianocore_atf.img.signed
+            elif [ ${ATF_VER} -lt 108 ]; then
+                build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
+                    -D UEFI_ATF_IMAGE=${TIANOCORE_ATF_SLIM} -D SCP_IMAGE=${SCP_SLIM}
             else
                 build -n $NUM_THREADS -a "$PLATFORM_ARCH" -t ${PLATFORM_TOOLCHAIN} -p "$CAPSULE_DSC" -b "$target" ${PLATFORM_BUILDFLAGS} -D FIRMWARE_VER="${VER}.${BUILD} Build ${BUILD_DATE}" \
-                    -D UEFI_ATF_IMAGE=${TIANOCORE_ATF_SLIM} -D SCP_IMAGE=${SCP_IMAGE}
+                    -D UEFI_ATF_IMAGE=${TIANOCORE_ATF_SLIM}.signed -D SCP_IMAGE=${SCP_SLIM}
             fi
             cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADEUEFIATFFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.cap
             cp $WS_BOARD/${target}_${PLATFORM_TOOLCHAIN}/FV/JADESCPFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $DEST_DIR/${PLATFORM_LOWER}_scp${BUILD_TYPE}_${VER}.${BUILD}.cap
+            if [ ${ATF_VER} -ge 108 ]; then
+                cp -f ${SCP_SLIM}.signed $DEST_DIR/${PLATFORM_LOWER}_scp${BUILD_TYPE}_${VER}.${BUILD}.dbu.sig.img
+                cp -f ${TIANOCORE_ATF_SLIM}.signed $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.dbu.sig.img
+            fi
         fi
-        rm -fr $DEST_DIR/*.img.signed $DEST_DIR/*.img.sig $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed
+        rm -fr $DEST_DIR/*.img.signed $DEST_DIR/*.img.sig $DEST_DIR/*.bin.padded $DEST_DIR/*.fd.crt $DEST_DIR/*.fip.signed $DEST_DIR/*.append
     fi
+
+    build_dbu_auth_key
+
     echo "Results: `readlink -f $DEST_DIR`"
     if which tree >/dev/null 2>&1; then
         tree -h $DEST_DIR
@@ -507,6 +580,7 @@ function check_tools
     fi
     echo "Checking atf-tools..."
     check_atf_tool ${TOOLS_DIR}
+    check_efitools ${TOOLS_DIR} ${EFITOOLS_VER}
     RET=$?
     if [ $RET -ne 0 ]; then
         exit 1

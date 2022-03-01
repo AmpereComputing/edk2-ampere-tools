@@ -247,6 +247,21 @@ function get_atf_tools
     return 0
 }
 
+function get_efitools
+{
+    EFI_TOOLS="$1"
+    EFITOOLS_VER="$2"
+    rm -fr ${EFI_TOOLS}
+    mkdir -p ${EFI_TOOLS}
+    cd ${EFI_TOOLS}
+    git init
+    git remote add origin -f https://github.com/vathpela/efitools.git
+    git config core.sparseCheckout true
+    git -C . checkout v${EFITOOLS_VER}
+    make cert-to-efi-sig-list sign-efi-sig-list
+    return 0
+}
+
 function check_golang
 {
     GOLANG_VER=$1
@@ -373,5 +388,26 @@ function check_lzma_tool
     fi
     echo "ERROR: can't locate the lzma tool" >&2
     echo "       please install lzma tool" >&2
+    return 1
+}
+
+function check_efitools
+{
+    TOOLS_DIR="$1"
+    EFITOOLS_VER="$2"
+    if which sign-efi-sig-list >/dev/null 2>&1 && which cert-to-efi-sig-list >/dev/null 2>&1 && sign-efi-sig-list --version 2>/dev/null | grep ${EFITOOLS_VER}; then
+        echo "---> sign-efi-sig-list, cert-to-efi-sig-list"
+        return 0
+    fi
+    get_efitools ${TOOLS_DIR}/efitools ${EFITOOLS_VER}
+    mkdir -p ${TOOLS_DIR}/toolchain/efitools
+    cp -a ${TOOLS_DIR}/efitools/sign-efi-sig-list ${TOOLS_DIR}/toolchain/efitools
+    cp -a ${TOOLS_DIR}/efitools/cert-to-efi-sig-list ${TOOLS_DIR}/toolchain/efitools
+    if which sign-efi-sig-list >/dev/null 2>&1 && which cert-to-efi-sig-list >/dev/null 2>&1; then
+        rm -fr ${TOOLS_DIR}/efitools
+        return 0
+    fi
+    echo "ERROR: can't locate the efitools" >&2
+    echo "       please install efitools" >&2
     return 1
 }
