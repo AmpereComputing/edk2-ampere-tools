@@ -403,7 +403,7 @@ function check_efitools
     mkdir -p ${TOOLS_DIR}/toolchain/efitools
     cp -a ${TOOLS_DIR}/efitools/sign-efi-sig-list ${TOOLS_DIR}/toolchain/efitools
     cp -a ${TOOLS_DIR}/efitools/cert-to-efi-sig-list ${TOOLS_DIR}/toolchain/efitools
-    if which sign-efi-sig-list >/dev/null 2>&1 && which cert-to-efi-sig-list >/dev/null 2>&1; then
+    if sign-efi-sig-list --version >/dev/null 2>&1 && cert-to-efi-sig-list --version >/dev/null 2>&1; then
         rm -fr ${TOOLS_DIR}/efitools
         return 0
     fi
