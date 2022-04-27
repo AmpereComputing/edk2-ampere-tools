@@ -4,7 +4,7 @@
 # edk2-build.sh: evolution of uefi-build.sh for edk2-platforms
 #
 # Copyright (c) 2012-2019, Linaro Ltd. All rights reserved.
-# Copyright (c) 2020 - 2021, Ampere Computing LLC. All rights reserved.
+# Copyright (c) 2020, Ampere Computing LLC.
 #
 # SPDX-License-Identifier: ISC
 #

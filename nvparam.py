@@ -3,7 +3,7 @@
 #
 # @file
 #
-# Copyright (c) 2020, Ampere Computing LLC. All rights reserved.<BR>
+# Copyright (c) 2020, Ampere Computing LLC.
 #
 # SPDX-License-Identifier: ISC
 #

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 #
 # Copyright (c) 2015-2019, Linaro Ltd. All rights reserved.
+# Copyright (c) 2020-2022, Ampere Computing LLC.
 #
 # SPDX-License-Identifier: ISC
 #
