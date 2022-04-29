@@ -1,0 +1,4 @@
+All files contained within the tools/PatchFd/ directory are licensed under the included 
+BSD-2-Plus-Patent license. The license text for these artifacts can be found at tools/PatchFd/LICENSE.
+
+All other portions of this repository are licensed under the ISC license, which can be found at ./ISC-LICENSE.
