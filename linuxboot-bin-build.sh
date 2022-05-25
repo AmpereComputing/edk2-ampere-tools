@@ -40,7 +40,7 @@ fi
 echo "Clean up LinuxBoot binaries..."
 rm -rf ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/{flashkernel,flashinitramfs.*}
 if [ -d ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux ]; then
-    $(MAKE) -C ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux && distclean
+    make -C ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux && distclean
 fi
 make -C $LINUBOOT_DIR/mainboards/ampere/${PLATFORM_LOWER} fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
 RESULT=$?
