@@ -234,6 +234,7 @@ function get_atf_tools
     if [ -e "${ATF_TOOLS}/tools/cert_create/cert_create" ]; then
         return 0
     fi
+    ATF_TOOL_TAG="v2.6"
     rm -fr ${ATF_TOOLS}
     mkdir -p ${ATF_TOOLS}
     cd ${ATF_TOOLS}
@@ -241,7 +242,7 @@ function get_atf_tools
     git remote add origin -f https://github.com/ARM-software/arm-trusted-firmware.git
     git config core.sparseCheckout true
     echo -ne "include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool" > .git/info/sparse-checkout
-    git -C . checkout --track origin/master
+    git -C . checkout tags/${ATF_TOOL_TAG} -b ${ATF_TOOL_TAG}
     make -C tools/cert_create -j $NUM_THREADS CRTTOOL=cert_create
     make -C tools/fiptool -j $NUM_THREADS FIPTOOL=fiptool
     return 0

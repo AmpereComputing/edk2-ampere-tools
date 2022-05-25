@@ -164,6 +164,7 @@ _check_atf_tools:
 	$(eval ATF_REPO_URL := https://github.com/ARM-software/arm-trusted-firmware.git)
 	$(eval export ATF_TOOLS_LIST := include/tools_share \nmake_helpers \ntools/cert_create \ntools/fiptool)
 	$(eval export PATH := $(ATF_TOOLS_DIR):$(PATH))
+	$(eval ATF_TOOL_TAG := v2.6)
 
 	@if which $(CERTTOOL) &>/dev/null && which $(FIPTOOL) &>/dev/null; then \
 		echo "OK"; \
@@ -173,7 +174,7 @@ _check_atf_tools:
 		rm -rf $(ATF_TOOLS_DIR) && mkdir -p $(ATF_TOOLS_DIR); \
 		cd $(SCRIPTS_DIR)/AtfTools && git init && git remote add origin -f $(ATF_REPO_URL) && git config core.sparseCheckout true; \
 		echo -e $$ATF_TOOLS_LIST > $(SCRIPTS_DIR)/AtfTools/.git/info/sparse-checkout; \
-		cd $(SCRIPTS_DIR)/AtfTools && git -C . checkout --track origin/master; \
+		cd $(SCRIPTS_DIR)/AtfTools && git -C . checkout tags/$(ATF_TOOL_TAG) -b $(ATF_TOOL_TAG); \
 		cd $(SCRIPTS_DIR)/AtfTools/tools/cert_create && $(MAKE) CRTTOOL=cert_create; \
 		cd $(SCRIPTS_DIR)/AtfTools/tools/fiptool && $(MAKE) FIPTOOL=fiptool; \
 		cp $(SCRIPTS_DIR)/AtfTools/tools/cert_create/cert_create $(ATF_TOOLS_DIR)/$(CERTTOOL); \
