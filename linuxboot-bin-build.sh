@@ -30,7 +30,7 @@ export PATH=${GOPATH}/bin:${TOOLS_DIR}/toolchain/go/bin:$PATH
 
 LINUBOOT_DIR="`readlink -f $PWD/linuxboot`"
 if [ ! -d "$LINUBOOT_DIR" ]; then
-    git clone --branch master https://github.com/linuxboot/linuxboot.git
+    git clone --recurse-submodules --single-branch --branch main https://github.com/linuxboot/linuxboot.git
 fi
 check_lzma_tool ${TOOLS_DIR}
 RESULT=$?
@@ -40,8 +40,9 @@ fi
 echo "Clean up LinuxBoot binaries..."
 rm -rf ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/{flashkernel,flashinitramfs.*}
 if [ -d ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux ]; then
-    make -C ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux && distclean
+    make -C ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux distclean
 fi
+sed -i "s;go get -u github.com/u-root/u-root;GO111MODULE=on go get -u github.com/u-root/u-root;g" ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/Makefile
 make -C $LINUBOOT_DIR/mainboards/ampere/${PLATFORM_LOWER} fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
