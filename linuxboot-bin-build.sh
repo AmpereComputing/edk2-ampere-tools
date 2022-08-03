@@ -9,6 +9,7 @@
 # LinuxBoot Binary Build
 #
 GOLANG_VER=1.17.4
+UROOT_VER=v0.8.0
 TOOLS_DIR="`dirname $0`"
 TOOLS_DIR="`readlink -f \"$TOOLS_DIR\"`"
 export TOOLS_DIR
@@ -42,7 +43,7 @@ rm -rf ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/{flashkernel,flashini
 if [ -d ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux ]; then
     make -C ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux distclean
 fi
-sed -i "s;go get -u github.com/u-root/u-root;GO111MODULE=on go get -u github.com/u-root/u-root;g" ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/Makefile
+sed -i "s;\tgo get -u github.com/u-root/u-root;\tGO111MODULE=on go get -u github.com/u-root/u-root\@${UROOT_VER};" ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/Makefile
 make -C $LINUBOOT_DIR/mainboards/ampere/${PLATFORM_LOWER} fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
