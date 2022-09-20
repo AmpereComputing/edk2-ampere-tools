@@ -8,8 +8,7 @@
 #
 # LinuxBoot Binary Build
 #
-GOLANG_VER=1.17.4
-UROOT_VER=v0.8.0
+GOLANG_VER=1.18.4
 TOOLS_DIR="`dirname $0`"
 TOOLS_DIR="`readlink -f \"$TOOLS_DIR\"`"
 export TOOLS_DIR
@@ -43,7 +42,10 @@ rm -rf ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/{flashkernel,flashini
 if [ -d ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux ]; then
     make -C ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/linux distclean
 fi
-sed -i "s;\tgo get -u github.com/u-root/u-root;\tGO111MODULE=on go get -u github.com/u-root/u-root\@${UROOT_VER};" ${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/Makefile
+LINUBOOT_MAKEFILE=${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/Makefile
+if ! grep -q "uroot-source" "${LINUBOOT_MAKEFILE}"; then
+    sed -i "s;uinitcmd=systemboot;uinitcmd=systemboot -uroot-source \$\{GOPATH\}/src/github.com/u-root/u-root;" ${LINUBOOT_MAKEFILE}
+fi
 make -C $LINUBOOT_DIR/mainboards/ampere/${PLATFORM_LOWER} fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
