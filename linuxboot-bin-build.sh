@@ -24,13 +24,13 @@ fi
 check_golang ${GOLANG_VER}
 export GOPATH=${TOOLS_DIR}/toolchain/gosource
 export GOFLAGS=-modcacherw
-export GO111MODULE=off
+export GO111MODULE=auto
 mkdir -p ${GOPATH}
 export PATH=${GOPATH}/bin:${TOOLS_DIR}/toolchain/go/bin:$PATH
 
 LINUBOOT_DIR="`readlink -f $PWD/linuxboot`"
 if [ ! -d "$LINUBOOT_DIR" ]; then
-    git clone --recurse-submodules --single-branch --branch main https://github.com/linuxboot/linuxboot.git
+    git clone --single-branch --branch main https://github.com/linuxboot/linuxboot.git
 fi
 check_lzma_tool ${TOOLS_DIR}
 RESULT=$?
@@ -46,7 +46,16 @@ LINUBOOT_MAKEFILE=${LINUBOOT_DIR}/mainboards/ampere/${PLATFORM_LOWER}/Makefile
 if ! grep -q "uroot-source" "${LINUBOOT_MAKEFILE}"; then
     sed -i "s;uinitcmd=systemboot;uinitcmd=systemboot -uroot-source \$\{GOPATH\}/src/github.com/u-root/u-root;" ${LINUBOOT_MAKEFILE}
 fi
-make -C $LINUBOOT_DIR/mainboards/ampere/${PLATFORM_LOWER} fetch flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
+
+if  grep -q "GO111MODULE=off" "${LINUBOOT_MAKEFILE}"; then
+    sed -i "s;GO111MODULE=off;;" ${LINUBOOT_MAKEFILE}
+fi
+
+go get -d github.com/u-root/u-root
+go get -d github.com/u-root/cpu/...
+go install github.com/u-root/u-root@latest
+
+make -C $LINUBOOT_DIR/mainboards/ampere/${PLATFORM_LOWER} getkernel flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
     echo "ERROR: compile LinuxBoot binaries issue" >&2
