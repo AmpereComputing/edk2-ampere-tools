@@ -53,7 +53,7 @@ fi
 
 go get -d github.com/u-root/u-root
 go get -d github.com/u-root/cpu/...
-go install github.com/u-root/u-root@latest
+go install github.com/u-root/u-root@v0.9.0
 
 make -C $LINUBOOT_DIR/mainboards/ampere/${PLATFORM_LOWER} getkernel flashkernel ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE}
 RESULT=$?
