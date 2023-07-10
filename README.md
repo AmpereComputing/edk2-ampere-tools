@@ -46,15 +46,10 @@ You need to download and install `cert_create` and `fiptool` from
 Arm Trusted Firmware.
 
 ```
-$ mkdir -p AtfTools
-$ cd AtfTools
-$ git init
-$ git remote add origin -f https://github.com/ARM-software/arm-trusted-firmware.git
-$ git config core.sparseCheckout true
-$ echo -ne "include/tools_share\nmake_helpers\ntools/cert_create\ntools/fiptool" > .git/info/sparse-checkout
-$ git -C . checkout --track origin/master
-$ make -C tools/cert_create CRTTOOL=cert_create
-$ make -C tools/fiptool FIPTOOL=fiptool
+$ git clone --depth 1 https://github.com/ARM-software/arm-trusted-firmware.git
+$ cd arm-trusted-firmware
+$ make -C tools/cert_create
+$ make -C tools/fiptool
 ```
 
 Set up your $PATH to include cert_create and fiptool from above.
