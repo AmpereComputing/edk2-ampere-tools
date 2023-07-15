@@ -70,6 +70,8 @@ BUILD := $(if $(BUILD),$(BUILD),100)
 VER_GT_104 := $(shell [ $(MAJOR_VER)$(MINOR_VER) -gt 104 ] && echo true)
 DEFAULT_IASL_VER := $(shell $(PARSE_PLATFORMS_TOOL) -c $(PLATFORMS_CONFIG) -p $(BOARD_NAME_UFL) get -o IASL_VER)
 IASL_VER ?= $(if $(VER_GT_104),$(DEFAULT_IASL_VER),20200110)
+# acpica tag: RMM_DD_MM
+ACPICA_TAG := R$(shell echo ${IASL_VER} | cut -c5-6)_$(shell echo ${IASL_VER} | cut -c7-8)_$(shell echo ${IASL_VER} | cut -c3-4)
 
 # efitools version
 EFITOOLS_VER := 1.8.1
@@ -183,9 +185,10 @@ _check_atf_tools:
 	fi
 
 _check_iasl:
-	@echo -n "Checking iasl..."
-	$(eval IASL_NAME := acpica-unix2-$(IASL_VER))
-	$(eval IASL_URL := "https://acpica.org/sites/acpica/files/$(IASL_NAME).tar.gz")
+	@echo -n "Checking iasl $(IASL_VER)..."
+
+	$(eval IASL_NAME := acpica-$(ACPICA_TAG))
+	$(eval IASL_URL := "https://github.com/acpica/acpica/archive/refs/tags/${ACPICA_TAG}.tar.gz")
 ifneq ($(shell $(IASL) -v 2>/dev/null | grep $(IASL_VER)),)
 # iASL compiler is already available in the system.
 	@echo "OK"

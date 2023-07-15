@@ -354,8 +354,9 @@ function check_iasl_tool
             return 0
         fi
     fi
-    IASL_NAME=acpica-unix2-${IASL_VER}
-    IASL_URL=https://acpica.org/sites/acpica/files/${IASL_NAME}.tar.gz
+    ACPICA_TAG="R${IASL_VER:4:2}_${IASL_VER:6:2}_${IASL_VER:2:2}"
+    IASL_NAME=acpica-${ACPICA_TAG}
+    IASL_URL=https://github.com/acpica/acpica/archive/refs/tags/${ACPICA_TAG}.tar.gz
     echo "Downloading ${IASL_URL}..."
     rm -fr ${TOOLS_DIR}/${IASL_NAME}
     wget -O - -q ${IASL_URL} | tar xzf - -C ${TOOLS_DIR}
@@ -374,9 +375,9 @@ function check_iasl_tool
     fi
     echo "ERROR: can't locate the iasl tool" >&2
     echo "       please download and install to edk2-ampere-tools/toolchain/iasl" >&2
-    echo "       $ wget https://acpica.org/sites/acpica/files/acpica-unix2-${IASL_VER}.tar.gz" >&2
-    echo "       $ tar xzf acpica-unix2-${IASL_VER}.tar.gz" >&2
-    echo "       $ make -C acpica-unix2-${IASL_VER} -j8" >&2
+    echo "       $ https://github.com/acpica/acpica/tags" >&2
+    echo "       $ tar xzf ${IASL_VER}.tar.gz" >&2
+    echo "       $ make -C ${IASL_VER} -j8 HOST=_CYGWIN" >&2
     echo "       $ cp generate/unix/bin/iasl edk2-ampere-tools/toolchain/iasl/" >&2
     return 1
 }
