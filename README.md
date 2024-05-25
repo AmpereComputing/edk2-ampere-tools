@@ -85,7 +85,7 @@ $ python nvparam.py -f Platform/Ampere/JadePkg/jade_board_setting.txt -o BUILDS/
 Generating the final image with the following commands:
 
 ```
-$ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
+$ dd bs=1024 count=2048 if=/dev/zero | LC_ALL=C tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 $ dd bs=1024 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 $ dd bs=1024 seek=1984 conv=notrunc if=BUILDS/jade_tianocore_atf/jade_board_setting.bin of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
 $ dd bs=1024 seek=2048 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.img
@@ -113,7 +113,7 @@ Result:
 
 For Ampere ATF version 1.05 and earlier
 ```
-$ dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
+$ dd bs=1024 count=2048 if=/dev/zero | LC_ALL=C tr "\000" "\377" > BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
 $ dd bs=1024 conv=notrunc if=<ampere_atf_image_filepath> of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
 $ dd bs=1024 seek=1984 conv=notrunc if=BUILDS/jade_tianocore_atf/jade_board_setting.bin of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
 $ dd bs=1024 seek=2048 if=BUILDS/jade_tianocore_atf/jade_tianocore.fip.signed of=BUILDS/jade_tianocore_atf/jade_tianocore_atf.cap.img
