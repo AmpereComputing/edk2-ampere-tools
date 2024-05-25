@@ -314,7 +314,7 @@ tianocore_fd: _tianocore_prepare
 tianocore_img: _check_atf_tools _check_atf_slim _check_board_setting tianocore_fd
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Image - ATF VERSION: $(ATF_MAJOR).$(ATF_MINOR).$(ATF_BUILD)..."
 	$(eval DBB_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
-	@dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $(OUTPUT_RAW_IMAGE)
+	@dd bs=1024 count=2048 if=/dev/zero | LC_ALL=C tr "\000" "\377" > $(OUTPUT_RAW_IMAGE)
 	@dd bs=1 seek=0 conv=notrunc if=$(ATF_SLIM) of=$(OUTPUT_RAW_IMAGE)
 	@if [ $(MAJOR_VER)$(MINOR_VER) -gt 202 ]; then \
 		$(CERTTOOL) -n --ntfw-nvctr 0 --key-alg rsa --hash-alg sha384 --nt-fw-key $(DBB_KEY) --nt-fw-cert ${ATF_SLIM}.crt --nt-fw ${ATF_SLIM}; \
@@ -334,7 +334,7 @@ tianocore_img: _check_atf_tools _check_atf_slim _check_board_setting tianocore_f
 # For Ampere ATF version 1.03 and 2.01, the following supports adding 4MB padding to the final image for
 # compatibility with the support of firmware update utility.
 	@if [ $(ATF_MAJOR)$(ATF_MINOR) -eq 103 ] || [ $(ATF_MAJOR)$(ATF_MINOR) -eq 201 ]; then \
-		dd if=/dev/zero bs=1024 count=4096 | tr "\000" "\377" > $(OUTPUT_IMAGE); \
+		dd if=/dev/zero bs=1024 count=4096 | LC_ALL=C tr "\000" "\377" > $(OUTPUT_IMAGE); \
 		dd bs=1 seek=4194304 conv=notrunc if=$(OUTPUT_RAW_IMAGE) of=$(OUTPUT_IMAGE); \
 	else \
 		cp $(OUTPUT_RAW_IMAGE) $(OUTPUT_IMAGE); \
@@ -360,7 +360,7 @@ tianocore_capsule: tianocore_img dbukeys_auth
 			ln -sf $(realpath $(SCP_SLIM)) $(SCP_IMAGE); \
 		else \
 			echo "Append dummy data to origin SCP image"; \
-			dd bs=1 count=261632 if=/dev/zero | tr "\000" "\377" > $(SCP_IMAGE).append; \
+			dd bs=1 count=261632 if=/dev/zero | LC_ALL=C tr "\000" "\377" > $(SCP_IMAGE).append; \
 			dd bs=1 seek=0 conv=notrunc if=$(SCP_SLIM) of=$(SCP_IMAGE).append; \
 			openssl dgst -sha384 -sign $(DBU_KEY) -out $(SCP_IMAGE).sig $(SCP_IMAGE).append; \
 			cat $(SCP_IMAGE).sig $(SCP_IMAGE).append > $(SCP_IMAGE).signed; \
@@ -386,7 +386,7 @@ tianocore_capsule: tianocore_img dbukeys_auth
 	else \
 		echo "Sign Tianocore Image"; \
 		echo "Append to dummy byte to UEFI image"; \
-		dd bs=1 count=13630976 if=/dev/zero | tr "\000" "\377" > $(OUTPUT_RAW_IMAGE).append; \
+		dd bs=1 count=13630976 if=/dev/zero | LC_ALL=C tr "\000" "\377" > $(OUTPUT_RAW_IMAGE).append; \
 		dd bs=1 seek=0 conv=notrunc if=$(OUTPUT_RAW_IMAGE) of=$(OUTPUT_RAW_IMAGE).append; \
 		openssl dgst -sha384 -sign $(DBU_KEY) -out $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).append; \
 		cat $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).append > $(OUTPUT_RAW_IMAGE).signed; \

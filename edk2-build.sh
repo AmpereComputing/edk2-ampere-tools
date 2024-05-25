@@ -136,12 +136,12 @@ function build_tianocore_atf
         TIANOCORE_ATF_SLIM="$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.img"
         if [ ${ATF_VER} -eq 103 ] || [ ${ATF_VER} -eq 201 ]; then
             # 4Mb padding only in 1.03 ATF VERSION
-            dd bs=1024 count=6144 if=/dev/zero | tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}
+            dd bs=1024 count=6144 if=/dev/zero | LC_ALL=C tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}
             dd bs=1 seek=4194304 conv=notrunc if=${ATF_IMAGE} of=${TIANOCORE_ATF_SLIM}
             dd bs=1 seek=6225920 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=${TIANOCORE_ATF_SLIM}
             dd bs=1024 seek=6144 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=${TIANOCORE_ATF_SLIM}
         else
-            dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}
+            dd bs=1024 count=2048 if=/dev/zero | LC_ALL=C tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}
             dd bs=1 conv=notrunc if=${ATF_IMAGE} of=${TIANOCORE_ATF_SLIM}
             if [ ${ATF_VER} -gt 107 ]; then
                 DBU_PRV_KEY="$PLATFORM_PATH/TestKeys/Dbu_AmpereTest.priv.pem"
@@ -160,7 +160,7 @@ function build_tianocore_atf
             if [ ${ATF_VER} -eq 103 ] || [ ${ATF_VER} -eq 201 ]; then
                 # Capsule not 4Mb padding
                 TIANOCORE_ATF_SLIM="$DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.cap.img"
-                dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}
+                dd bs=1024 count=2048 if=/dev/zero | LC_ALL=C tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}
                 dd bs=1 conv=notrunc if=${ATF_IMAGE} of=${TIANOCORE_ATF_SLIM}
                 dd bs=1 seek=2031616 conv=notrunc if=$DEST_DIR/${PLATFORM_LOWER}_board_setting.bin of=${TIANOCORE_ATF_SLIM}
                 dd bs=1024 seek=2048 if=$DEST_DIR/${PLATFORM_LOWER}_tianocore${LINUXBOOT_FMT}${BUILD_TYPE}_${VER}.${BUILD}.fip.signed of=${TIANOCORE_ATF_SLIM}
@@ -184,7 +184,7 @@ function build_tianocore_atf
                     exit 1
                 fi
                 echo "Append to dummy byte to UEFI image"
-                dd bs=1 count=13630976 if=/dev/zero | tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}.append
+                dd bs=1 count=13630976 if=/dev/zero | LC_ALL=C tr "\000" "\377" > ${TIANOCORE_ATF_SLIM}.append
                 dd bs=1 seek=0 conv=notrunc if=${TIANOCORE_ATF_SLIM} of=${TIANOCORE_ATF_SLIM}.append
                 openssl dgst -sha384 -sign ${DBU_PRV_KEY} \
                     -out $DEST_DIR/${PLATFORM_LOWER}_tianocore_atf${BUILD_TYPE}_${VER}.${BUILD}.img.sig \
@@ -210,7 +210,7 @@ function build_tianocore_atf
                     fi
                     echo "Append dummy data to origin SCP image"
                     SCP_SLIM="$WS_BOARD/${PLATFORM_LOWER}_scp.slim"
-                    dd bs=1 count=261632 if=/dev/zero | tr "\000" "\377" > ${SCP_SLIM}.append
+                    dd bs=1 count=261632 if=/dev/zero | LC_ALL=C tr "\000" "\377" > ${SCP_SLIM}.append
                     dd bs=1 seek=0 conv=notrunc if=${SCP_IMAGE} of=${SCP_SLIM}.append
                     openssl dgst -sha384 -sign ${DBU_PRV_KEY} -out ${SCP_SLIM}.sig ${SCP_SLIM}.append
                     cat ${SCP_SLIM}.sig ${SCP_SLIM}.append > ${SCP_SLIM}.signed
