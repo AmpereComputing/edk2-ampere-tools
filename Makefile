@@ -44,7 +44,7 @@ CERTTOOL := cert_create
 CERT_TO_EFI_SIG_LIST:=cert-to-efi-sig-list
 SIGN_EFI_SIG_LIST:=sign-efi-sig-list
 NVGENCMD := python $(SCRIPTS_DIR)/nvparam.py
-EXECUTABLES := openssl git cut sed awk wget tar flex bison gcc g++ python3
+EXECUTABLES := openssl git cut sed awk wget tar flex bison gcc g++ python3 gcab
 
 PARSE_PLATFORMS_TOOL := $(SCRIPTS_DIR)/parse-platforms.py
 PLATFORMS_CONFIG := $(SCRIPTS_DIR)/edk2-platforms.config
@@ -339,6 +339,46 @@ tianocore_img: _check_atf_tools _check_atf_slim _check_board_setting tianocore_f
 	else \
 		cp $(OUTPUT_RAW_IMAGE) $(OUTPUT_IMAGE); \
 	fi
+.PHONY: fw_cabinet_metainfo
+fw_cabinet_metainfo:
+	$(eval MEDIAINFO_FILE:=firmware.metainfo.xml)
+	$(eval AMP_MEDIAINFO_FILE:=$(CUR_DIR)/ampere.metainfo.xml)
+	$(eval COMPONENT:=SCP)
+	$(eval REL_VER:=$(VER).$(BUILD))
+	$(eval AMPERE_GUID:=f08bca31-542e-4cea-8b48-8e54f9422594)
+	@sed -e 's/COMPONENT/$(COMPONENT)/g' \
+		 -e 's/REL_VER/$(REL_VER)/g' \
+		 -e 's/AMP_CPU/$(TARGETSOC_UFL)/g' \
+		 -e 's/AMPERE_GUID/$(AMPERE_GUID)/g' \
+		 -e 's/BUILD_DATE/$(BUILD_DATE)/g' \
+		 $(AMP_MEDIAINFO_FILE) > $(MEDIAINFO_FILE)
+
+.PHONY: fw_cabinet
+fw_cabinet:
+	$(eval COMPONENT:=SCP)
+	@echo
+	@echo "Creating $(COMPONENT) Cabinet..."
+	$(eval REL_VER:=$(VER).$(BUILD))
+	$(eval CAP_FILE:=$(FWBINDIR)/$(TARGET_SOC)_scp_$(REL_VER).cap)
+	$(eval CAB_FILE:=$(FWBINDIR)/$(TARGET_SOC)_scp_$(REL_VER).cab)
+	$(eval GEN_CAB:=$(OUTPUT_BIN_DIR)/gen_cab)
+	@mkdir -p $(GEN_CAB)
+	@if [ -e "$(CAP_FILE)" ]; then \
+		 rm -fr $(GEN_CAB)/firmware.bin; \
+		 cd $(GEN_CAB) && ln -sf $(CAP_FILE) firmware.bin; \
+	else \
+		 echo "Error: $(CAP_FILE) not found."; \
+		 exit -1; \
+	fi
+	@make fw_cabinet_metainfo COMPONENT=$(COMPONENT) REL_VER=$(REL_VER) MEDIAINFO_FILE=$(GEN_CAB)/firmware.metainfo.xml
+	@if [ -e "$(GEN_CAB)/firmware.metainfo.xml" ]; then \
+		 cd $(GEN_CAB) && gcab -v -c $(CAB_FILE) firmware.metainfo.xml firmware.bin; \
+	else \
+		 echo "Error: firmware.metainfo.xml not found."; \
+		 exit -1; \
+	fi
+	@rm -rf $(GEN_CAB)
+	@echo "Completed creating $(COMPONENT) Cabinet."
 
 ## tianocore_capsule	: Tianocore Capsule image
 .PHONY: tianocore_capsule
@@ -398,9 +438,12 @@ tianocore_capsule: tianocore_img dbukeys_auth
 		-D UEFI_ATF_IMAGE=$(TIANOCORE_ATF_IMAGE) \
 		-D SCP_IMAGE=$(SCP_IMAGE) \
 		-p Platform/Ampere/$(BOARD_NAME_UFL)Pkg/$(BOARD_NAME_UFL)Capsule.dsc
+
 	@cp -f $(EDK2_FV_DIR)/JADEUEFIATFFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_UEFI_ATF_CAPSULE)
 	@cp -f $(EDK2_FV_DIR)/JADESCPFIRMWAREUPDATECAPSULEFMPPKCS7.Cap $(OUTPUT_SCP_CAPSULE)
 	@cp -f $(EDK2_AARCH64_DIR)/CapsuleApp.efi $(OUTPUT_CAPSULE_APP)
+	@$(MAKE) fw_cabinet REL_VER=$(VER).$(BUILD) COMPONENT=SCP CAP_FILE=$(OUTPUT_SCP_CAPSULE) CAB_FILE=$(subst cap,cab,$(OUTPUT_SCP_CAPSULE))
+	@$(MAKE) fw_cabinet REL_VER=$(VER).$(BUILD) COMPONENT=UEFI CAP_FILE=$(OUTPUT_UEFI_ATF_CAPSULE) CAB_FILE=$(subst cap,cab,$(OUTPUT_UEFI_ATF_CAPSULE))
 	@rm -f $(OUTPUT_RAW_IMAGE).sig $(OUTPUT_RAW_IMAGE).signed $(OUTPUT_RAW_IMAGE) $(OUTPUT_RAW_IMAGE).append \
 			$(SCP_IMAGE).append
 

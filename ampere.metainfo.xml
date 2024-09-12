@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="firmware">
+  <id>comp.ampere.AMP_CPU.firmware.COMPONENT</id>
+  <name>Ampere AMP_CPU COMPONENT Firmware</name>
+  <summary>Ampere AMP_CPU COMPONENT Firmware</summary>
+  <description>Ampere AMP_CPU COMPONENT Firmware</description>
+  <provides>
+    <firmware type="flashed">AMPERE_GUID</firmware>
+  </provides>
+  <url type="homepage">https://amperecomputing.com</url>
+  <metadata_license>BSD-3-Clause AND Apache-2.0</metadata_license>
+  <project_license>BSD-3-Clause AND Apache-2.0</project_license>
+  <releases>
+    <release version="REL_VER" date="BUILD_DATE" urgency="medium">
+      <description>
+        Ampere AMP_CPU COMPONENT Firmware, Version REL_VER
+      </description>
+    </release>
+  </releases>
+  <keywords>
+    <keyword>bios</keyword>
+    <keyword>scp</keyword>
+    <keyword>uefi</keyword>
+  </keywords>
+</component>
+
