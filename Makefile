@@ -288,6 +288,31 @@ dbukeys_auth: _check_efitools
 		rm -r $(DBUDIR); \
 	fi
 
+.PHONY: dbbkeys_auth
+dbbkeys_auth: _check_efitools
+	$(eval DBBAUTH:=$(OUTPUT_BIN_DIR)/dbbkey.auth)
+	$(eval DELDBBAUTH:=$(OUTPUT_BIN_DIR)/del_dbbkey.auth)
+	$(eval DBBGUID:=$(OUTPUT_BIN_DIR)/dbb_guid.txt)
+	$(eval DBBKEY:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
+	$(eval DBBCER:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.cer.pem)
+	$(eval DBBDIR:=$(OUTPUT_BIN_DIR)/dbbkeys)
+	$(eval FWUGUID:=$(shell python3 -c 'import uuid; print(str(uuid.uuid1()))'))
+
+	@if [ $(MAJOR_VER)$(MINOR_VER) -gt 202 ]; then \
+		mkdir -p $(DBBDIR); \
+		echo FWU_GUID=$(FWUGUID); \
+		echo $(FWUGUID) > $(DBBDIR)/dbb_guid.txt; \
+		cd $(DBBDIR); \
+		$(CERT_TO_EFI_SIG_LIST) -g $(FWUGUID) $(DBBCER) dbb.esl; \
+		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+						-k $(DBBKEY) -c $(DBBCER) dbb dbb.esl dbbkey.auth; \
+		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+						-k $(DBBKEY) -c $(DBBCER) dbb /dev/null del_dbbkey.auth; \
+		cp -f $(DBBDIR)/dbbkey.auth $(DBBAUTH); \
+		cp -f $(DBBDIR)/del_dbbkey.auth $(DELDBBAUTH); \
+		rm -r $(DBBDIR); \
+	fi
+
 ## tianocore_fd		: Tianocore FD image
 .PHONY: tianocore_fd
 tianocore_fd: _tianocore_prepare
@@ -382,7 +407,7 @@ fw_cabinet:
 
 ## tianocore_capsule	: Tianocore Capsule image
 .PHONY: tianocore_capsule
-tianocore_capsule: tianocore_img dbukeys_auth
+tianocore_capsule: tianocore_img dbukeys_auth dbbkeys_auth
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Capsule..."
 	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
 # *atfedk2.img.signed was chosen to be backward compatible with release 1.01
