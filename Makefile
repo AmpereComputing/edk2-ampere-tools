@@ -271,7 +271,7 @@ dbukeys_auth: _check_efitools
 	$(eval DBUKEY:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
 	$(eval DBUCER:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.cer.pem)
 	$(eval DBUDIR:=$(OUTPUT_BIN_DIR)/dbukeys)
-	$(eval FWUGUID:=$(shell python3 -c 'import uuid; print(str(uuid.uuid1()))'))
+	$(eval FWUGUID:="4796d3b0-1bbb-4680-b471-a49b49b2390e")
 
 	@if [ $(MAJOR_VER)$(MINOR_VER) -gt 202 ]; then \
 		mkdir -p $(DBUDIR); \
@@ -279,9 +279,9 @@ dbukeys_auth: _check_efitools
 		echo $(FWUGUID) > $(DBUDIR)/dbu_guid.txt; \
 		cd $(DBUDIR); \
 		$(CERT_TO_EFI_SIG_LIST) -g $(FWUGUID) $(DBUCER) dbu.esl; \
-		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(shell date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
 						-k $(DBUKEY) -c $(DBUCER) dbu dbu.esl dbukey.auth; \
-		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(shell date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
 						-k $(DBUKEY) -c $(DBUCER) dbu /dev/null del_dbukey.auth; \
 		cp -f $(DBUDIR)/dbukey.auth $(DBUAUTH); \
 		cp -f $(DBUDIR)/del_dbukey.auth $(DELDBUAUTH); \
@@ -296,7 +296,7 @@ dbbkeys_auth: _check_efitools
 	$(eval DBBKEY:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
 	$(eval DBBCER:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.cer.pem)
 	$(eval DBBDIR:=$(OUTPUT_BIN_DIR)/dbbkeys)
-	$(eval FWUGUID:=$(shell python3 -c 'import uuid; print(str(uuid.uuid1()))'))
+	$(eval FWUGUID:="4796d3b0-1bbb-4680-b471-a49b49b2390e")
 
 	@if [ $(MAJOR_VER)$(MINOR_VER) -gt 202 ]; then \
 		mkdir -p $(DBBDIR); \
@@ -304,9 +304,9 @@ dbbkeys_auth: _check_efitools
 		echo $(FWUGUID) > $(DBBDIR)/dbb_guid.txt; \
 		cd $(DBBDIR); \
 		$(CERT_TO_EFI_SIG_LIST) -g $(FWUGUID) $(DBBCER) dbb.esl; \
-		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(shell date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
 						-k $(DBBKEY) -c $(DBBCER) dbb dbb.esl dbbkey.auth; \
-		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
+		$(SIGN_EFI_SIG_LIST) -g $(FWUGUID) -t "$(shell date --date='1 second' +'%Y-%m-%d %H:%M:%S')" \
 						-k $(DBBKEY) -c $(DBBCER) dbb /dev/null del_dbbkey.auth; \
 		cp -f $(DBBDIR)/dbbkey.auth $(DBBAUTH); \
 		cp -f $(DBBDIR)/del_dbbkey.auth $(DELDBBAUTH); \
