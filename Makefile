@@ -1,6 +1,6 @@
 # @file
 #
-# Copyright (c) 2020-2021, Ampere Computing LLC.
+# Copyright (c) 2020-2024, Ampere Computing LLC.
 #
 # SPDX-License-Identifier: ISC
 #
@@ -25,15 +25,16 @@ EDK2_SRC_DIR := $(ROOT_DIR)/edk2
 EDK2_NON_OSI_SRC_DIR := $(ROOT_DIR)/edk2-non-osi
 EDK2_PLATFORMS_SRC_DIR := $(ROOT_DIR)/edk2-platforms
 EDK2_FEATURES_INTEL_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Features/Intel
+EDK2_FEATURES_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Features
 EDK2_PLATFORMS_PKG_DIR := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg
-REQUIRE_EDK2_SRC := $(EDK2_SRC_DIR) $(EDK2_PLATFORMS_SRC_DIR)$(if $(wildcard $(EDK2_NON_OSI_SRC_DIR)), $(EDK2_NON_OSI_SRC_DIR),) $(EDK2_FEATURES_INTEL_DIR)
+REQUIRE_EDK2_SRC := $(EDK2_SRC_DIR) $(EDK2_PLATFORMS_SRC_DIR)$(if $(wildcard $(EDK2_NON_OSI_SRC_DIR)), $(EDK2_NON_OSI_SRC_DIR),) $(EDK2_FEATURES_INTEL_DIR) $(EDK2_FEATURES_DIR)
 
 ATF_TOOLS_DIR := $(SCRIPTS_DIR)/toolchain/atf-tools
 IASL_DIR := $(SCRIPTS_DIR)/toolchain/iasl
 EFI_TOOLS_DIR := $(SCRIPTS_DIR)/toolchain/efitools
 
 # Compiler variables
-EDK2_GCC_TAG := GCC5
+EDK2_GCC_TAG := GCC
 
 NUM_THREADS := $(shell echo $$(( $(shell getconf _NPROCESSORS_ONLN) + $(shell getconf _NPROCESSORS_ONLN))))
 
@@ -324,13 +325,15 @@ tianocore_fd: _tianocore_prepare
 	$(if $(DSC_FILE),,$(error "DSC not found"))
 	$(eval EDK2_FD_IMAGE := $(EDK2_FV_DIR)/BL33_$(BOARD_NAME_UPPER)_UEFI.fd)
 
-	@if [ $(BUILD_LINUXBOOT) -eq 1 ]; then \
+	@if [ -d $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/LinuxBootPkg ] && [ $(BUILD_LINUXBOOT) -eq 1 ]; then \
 		cp $(LINUXBOOT_BIN) $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/LinuxBootPkg/AArch64/flashkernel; \
 	fi
 
 	. $(EDK2_SRC_DIR)/edksetup.sh && build -a AARCH64 -t $(EDK2_GCC_TAG) -b $(BUILD_VARIANT) -n $(NUM_THREADS) \
 		-D FIRMWARE_VER="$(MAJOR_VER).$(MINOR_VER).$(BUILD) Build $(shell date '+%Y%m%d')" \
 		-D MAJOR_VER=$(MAJOR_VER) -D MINOR_VER=$(MINOR_VER) -D SECURE_BOOT_ENABLE \
+		-D LINUXBOOT_FILE=$(LINUXBOOT_BIN) \
+		--pcd gEmbeddedTokenSpaceGuid.PcdMemoryAttributeEnabledDefault=FALSE \
 		-p $(DSC_FILE)
 	@mkdir -p $(OUTPUT_BIN_DIR)
 	@cp -f $(EDK2_FD_IMAGE) $(OUTPUT_FD_IMAGE)
