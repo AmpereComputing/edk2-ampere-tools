@@ -133,6 +133,7 @@ all: tianocore_capsule linuxboot_img
 clean:
 	@echo "Tianocore clean BaseTools..."
 	$(MAKE) -C $(EDK2_SRC_DIR)/BaseTools clean
+	cd $(EDK2_SRC_DIR) && git clean -dfx Conf/.* Conf/*
 
 	@echo "Tianocore clean $(CUR_DIR)/Build..."
 	@rm -fr $(CUR_DIR)/Build
