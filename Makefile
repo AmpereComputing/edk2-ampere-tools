@@ -55,6 +55,7 @@ BUILD_VARIANT := $(if $(shell echo $(DEBUG) | grep -w 1),DEBUG,RELEASE)
 BUILD_VARIANT_LOWER := $(shell echo $(BUILD_VARIANT) | tr A-Z a-z)
 BUILD_VARIANT_UFL := $(shell echo $(BUILD_VARIANT_LOWER) | sed 's/.*/\u&/')
 
+LINUXBOOT_FILE_IN_UEFI_EXTRA ?= 0
 GIT_VER := $(shell cd $(EDK2_PLATFORMS_SRC_DIR) 2>/dev/null && \
 			git describe --tags --dirty --long --always | grep ampere | grep -v dirty | cut -d \- -f 1 | cut -d \v -f 2)
 # Input VER
@@ -85,6 +86,7 @@ OUTPUT_BIN_DIR := $(if $(DEST_DIR),$(DEST_DIR),$(CUR_DIR)/BUILDS/$(BOARD_NAME)_t
 OUTPUT_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).img
 OUTPUT_RAW_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).img.raw
 OUTPUT_FD_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).fd
+OUTPUT_UEFI_EXTRA_FD_IMAGE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_uefi_extra$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).fd
 OUTPUT_BOARD_SETTING_BIN := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_board_setting.bin
 
 BOARD_SETTING_FILES := $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME)_board_setting.txt $(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME_UFL)BoardSetting.cfg
@@ -324,6 +326,7 @@ tianocore_fd: _tianocore_prepare
 									,$(EDK2_PLATFORMS_PKG_DIR)/$(BOARD_NAME_UFL).dsc))))
 	$(if $(DSC_FILE),,$(error "DSC not found"))
 	$(eval EDK2_FD_IMAGE := $(EDK2_FV_DIR)/BL33_$(BOARD_NAME_UPPER)_UEFI.fd)
+	$(eval LINUXBOOT_UEFI_EXTRA := $(EDK2_FV_DIR)/LINUXBOOT_UEFI_EXTRA.fd)
 
 	@if [ -d $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/LinuxBootPkg ] && [ $(BUILD_LINUXBOOT) -eq 1 ]; then \
 		cp $(LINUXBOOT_BIN) $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/LinuxBootPkg/AArch64/flashkernel; \
@@ -333,10 +336,14 @@ tianocore_fd: _tianocore_prepare
 		-D FIRMWARE_VER="$(MAJOR_VER).$(MINOR_VER).$(BUILD) Build $(shell date '+%Y%m%d')" \
 		-D MAJOR_VER=$(MAJOR_VER) -D MINOR_VER=$(MINOR_VER) -D SECURE_BOOT_ENABLE \
 		-D LINUXBOOT_FILE=$(LINUXBOOT_BIN) \
+		-D LINUXBOOT_FILE_IN_UEFI_EXTRA=$(LINUXBOOT_FILE_IN_UEFI_EXTRA) \
 		--pcd gEmbeddedTokenSpaceGuid.PcdMemoryAttributeEnabledDefault=FALSE \
 		-p $(DSC_FILE)
 	@mkdir -p $(OUTPUT_BIN_DIR)
 	@cp -f $(EDK2_FD_IMAGE) $(OUTPUT_FD_IMAGE)
+	@if [ -f $(LINUXBOOT_UEFI_EXTRA) ] && [ $(LINUXBOOT_FILE_IN_UEFI_EXTRA) -eq 1 ]; then \
+		cp -r $(LINUXBOOT_UEFI_EXTRA) $(OUTPUT_UEFI_EXTRA_FD_IMAGE); \
+	fi
 
 ## tianocore_img		: Tianocore Integrated image
 .PHONY: tianocore_img
