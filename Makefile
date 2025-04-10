@@ -96,6 +96,8 @@ ATF_MAJOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) 2>/dev/null | tr -d '\
 ATF_MINOR = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) 2>/dev/null | tr -d '\0' | cut -c8-9 )
 ATF_BUILD = $(shell grep -aPo AMPC31.\{0,14\} $(ATF_SLIM) 2>/dev/null | tr -d '\0' | cut -c10-17 )
 
+KEY_PATH := $(if $(wildcard $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys),$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys,$(CUR_DIR)/testkeys)
+
 # Targets
 define HELP_MSG
 Ampere EDK2 Tools
@@ -262,7 +264,7 @@ _tianocore_prepare: _check_source _check_tools _check_compiler _check_iasl
 
 _tianocore_sign_fd: _check_atf_tools _check_efitools
 	@echo "Creating certitficate for $(OUTPUT_FD_IMAGE)"
-	$(eval DBB_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
+	$(eval DBB_KEY := $(KEY_PATH)/Dbb_AmpereTest.priv.pem)
 	@$(CERTTOOL) -n --ntfw-nvctr 0 --key-alg rsa --nt-fw-key $(DBB_KEY) --nt-fw-cert $(OUTPUT_FD_IMAGE).crt --nt-fw $(OUTPUT_FD_IMAGE)
 	@$(FIPTOOL) create --nt-fw-cert $(OUTPUT_FD_IMAGE).crt --nt-fw $(OUTPUT_FD_IMAGE) $(OUTPUT_FD_IMAGE).signed
 	@rm -fr $(OUTPUT_FD_IMAGE).crt
@@ -272,8 +274,8 @@ dbukeys_auth: _check_efitools
 	$(eval DBUAUTH:=$(OUTPUT_BIN_DIR)/dbukey.auth)
 	$(eval DELDBUAUTH:=$(OUTPUT_BIN_DIR)/del_dbukey.auth)
 	$(eval DBUGUID:=$(OUTPUT_BIN_DIR)/dbu_guid.txt)
-	$(eval DBUKEY:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
-	$(eval DBUCER:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.cer.pem)
+	$(eval DBUKEY:=$(KEY_PATH)/Dbu_AmpereTest.priv.pem)
+	$(eval DBUCER:=$(KEY_PATH)/Dbu_AmpereTest.cer.pem)
 	$(eval DBUDIR:=$(OUTPUT_BIN_DIR)/dbukeys)
 	$(eval FWUGUID:="4796d3b0-1bbb-4680-b471-a49b49b2390e")
 
@@ -297,8 +299,8 @@ dbbkeys_auth: _check_efitools
 	$(eval DBBAUTH:=$(OUTPUT_BIN_DIR)/dbbkey.auth)
 	$(eval DELDBBAUTH:=$(OUTPUT_BIN_DIR)/del_dbbkey.auth)
 	$(eval DBBGUID:=$(OUTPUT_BIN_DIR)/dbb_guid.txt)
-	$(eval DBBKEY:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
-	$(eval DBBCER:=$(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.cer.pem)
+	$(eval DBBKEY:=$(KEY_PATH)/Dbb_AmpereTest.priv.pem)
+	$(eval DBBCER:=$(KEY_PATH)/Dbb_AmpereTest.cer.pem)
 	$(eval DBBDIR:=$(OUTPUT_BIN_DIR)/dbbkeys)
 	$(eval FWUGUID:="4796d3b0-1bbb-4680-b471-a49b49b2390e")
 
@@ -349,7 +351,7 @@ tianocore_fd: _tianocore_prepare
 .PHONY: tianocore_img
 tianocore_img: _check_atf_tools _check_atf_slim _check_board_setting tianocore_fd
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Image - ATF VERSION: $(ATF_MAJOR).$(ATF_MINOR).$(ATF_BUILD)..."
-	$(eval DBB_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbb_AmpereTest.priv.pem)
+	$(eval DBB_KEY := $(KEY_PATH)/Dbb_AmpereTest.priv.pem)
 	@dd bs=1024 count=2048 if=/dev/zero | tr "\000" "\377" > $(OUTPUT_RAW_IMAGE)
 	@dd bs=1 seek=0 conv=notrunc if=$(ATF_SLIM) of=$(OUTPUT_RAW_IMAGE)
 	@if [ $(MAJOR_VER)$(MINOR_VER) -gt 202 ]; then \
@@ -420,7 +422,7 @@ fw_cabinet:
 .PHONY: tianocore_capsule
 tianocore_capsule: tianocore_img dbukeys_auth dbbkeys_auth
 	@echo "Build Tianocore $(BUILD_VARIANT_UFL) Capsule..."
-	$(eval DBU_KEY := $(EDK2_PLATFORMS_SRC_DIR)/Platform/Ampere/$(BOARD_NAME_UFL)Pkg/TestKeys/Dbu_AmpereTest.priv.pem)
+	$(eval DBU_KEY := $(KEY_PATH)/Dbu_AmpereTest.priv.pem)
 # *atfedk2.img.signed was chosen to be backward compatible with release 1.01
 	$(eval TIANOCORE_ATF_IMAGE := $(WORKSPACE)/Build/$(BOARD_NAME_UFL)/$(BOARD_NAME)_atfedk2.img.signed)
 	$(eval OUTPUT_UEFI_ATF_CAPSULE := $(OUTPUT_BIN_DIR)/$(BOARD_NAME)_tianocore_atf$(LINUXBOOT_FMT)$(OUTPUT_VARIANT)_$(VER).$(BUILD).cap)
